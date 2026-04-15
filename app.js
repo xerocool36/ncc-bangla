@@ -10,12 +10,12 @@
 const TOTAL = (typeof QUESTIONS !== 'undefined') ? QUESTIONS.length : 0;
 
 const CATEGORIES = [
-  { slug: 'mechanics',        label: 'Meccanica' },
-  { slug: 'road_safety',      label: 'Sicurezza' },
-  { slug: 'insurance',        label: 'Assicurazione' },
-  { slug: 'ncc_regs',         label: 'Normativa NCC' },
-  { slug: 'navigation',       label: 'Navigazione' },
-  { slug: 'advanced_systems', label: 'Sistemi Avanzati' },
+  { slug: 'mechanics',        label: 'Meccanica',        bn: 'মেকানিক্স' },
+  { slug: 'road_safety',      label: 'Sicurezza',        bn: 'রাস্তার নিরাপত্তা' },
+  { slug: 'insurance',        label: 'Assicurazione',    bn: 'বীমা' },
+  { slug: 'ncc_regs',         label: 'Normativa NCC',    bn: 'এনসিসি বিধিমালা' },
+  { slug: 'navigation',       label: 'Navigazione',      bn: 'নেভিগেশন' },
+  { slug: 'advanced_systems', label: 'Sistemi Avanzati', bn: 'উন্নত সিস্টেম' },
 ];
 
 const LS = {
@@ -23,6 +23,7 @@ const LS = {
   BOOKMARKS: 'ncc_bookmarks',
   CACHE:     'ncc_trans_cache',
   SETTINGS:  'ncc_settings',
+  NOTES:     'ncc_notes',
 };
 
 // ─────────────────────────────────────────
@@ -95,6 +96,22 @@ const storage = {
     localStorage.removeItem(LS.PROGRESS);
     localStorage.removeItem(LS.BOOKMARKS);
   },
+  clearWrong(id) {
+    const p = this.getProgress();
+    if (p[id]) { p[id].wrong = 0; this.saveProgress(p); }
+  },
+  getNotes() {
+    return JSON.parse(localStorage.getItem(LS.NOTES) || '[]');
+  },
+  saveNote(note) {
+    const notes = this.getNotes();
+    notes.unshift(note);
+    localStorage.setItem(LS.NOTES, JSON.stringify(notes));
+  },
+  deleteNote(id) {
+    const notes = this.getNotes().filter(n => n.id !== id);
+    localStorage.setItem(LS.NOTES, JSON.stringify(notes));
+  },
 };
 
 // ─────────────────────────────────────────
@@ -124,26 +141,25 @@ const translationModule = {
 
     const { id, it } = question;
     const parts = [it.question, ...it.options];
-    const joined = parts.join('|||');
+    const fieldNames = ['question', 'opt_0', 'opt_1', 'opt_2'];
 
     try {
-      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(joined)}&langpair=it|bn`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-
-      const translated = data.responseData?.translatedText || '';
-      const bnParts = translated.split('|||');
+      // Translate each part separately — joining with a separator is unreliable
+      // because MyMemory often strips or translates the separator itself
+      const translations = await Promise.all(parts.map(async (part) => {
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(part)}&langpair=it|bn`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        return (data.responseData?.translatedText || '').trim();
+      }));
 
       const diskCache = storage.getCache();
-      const fieldNames = ['question', 'opt_0', 'opt_1', 'opt_2'];
-
-      for (let i = 0; i < fieldNames.length; i++) {
+      translations.forEach((val, i) => {
         const k = this._key(id, fieldNames[i]);
-        const val = (bnParts[i] || '').trim();
         this.memCache[k] = val;
         diskCache[k] = val;
-      }
+      });
       storage.saveCache(diskCache);
 
       return this.getCached(id);
@@ -295,6 +311,7 @@ const spacedRep = {
 // ─────────────────────────────────────────
 const studyCtrl = {
   currentTranslation: null,
+  translationVisible: false,
 
   init() {
     this.rebuildQueue();
@@ -322,7 +339,12 @@ const studyCtrl = {
     }
 
     this.currentTranslation = null;
+    this.translationVisible = false;
     state.answered = false;
+
+    // Reset translate button
+    document.getElementById('btn-translate').innerHTML =
+      `<svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg> অনুবাদ`;
 
     // Meta
     document.getElementById('q-number').textContent = `Q${q.id}`;
@@ -374,9 +396,18 @@ const studyCtrl = {
     document.getElementById('study-pos').textContent =
       `${state.studyIndex + 1} / ${state.studyQueue.length}`;
 
-    // If already had a cached translation, show it pre-loaded
+    // Pre-populate translation DOM if cached, but keep it hidden until user clicks
     const cached = translationModule.getCached(q.id);
-    if (cached) this._applyTranslation(cached, q);
+    if (cached) {
+      this._applyTranslation(cached, q);
+      // Immediately hide it — user still has to click the button to reveal
+      document.getElementById('q-text-bn').classList.add('hidden');
+      document.querySelectorAll('#q-options .option-btn .option-bn').forEach(el => el.classList.add('hidden'));
+      document.getElementById('btn-tts-bn').classList.add('hidden');
+      document.getElementById('btn-translate').innerHTML =
+        `<svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg> অনুবাদ`;
+      this.translationVisible = false;
+    }
   },
 
   handleAnswer(selectedIndex) {
@@ -420,16 +451,25 @@ const studyCtrl = {
     const q = this.currentQuestion();
     if (!q) return;
 
+    // If already fetched, just toggle visibility
+    if (this.currentTranslation) {
+      this._toggleTranslation();
+      return;
+    }
+
     const btn = document.getElementById('btn-translate');
     btn.classList.add('loading');
-    btn.textContent = 'অনুবাদ হচ্ছে...';
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg> অনুবাদ হচ্ছে...`;
 
     const result = await translationModule.translate(q);
 
     btn.classList.remove('loading');
-    btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg> অনুবাদ`;
+
+    // Guard: user may have navigated to a different question while fetch was in-flight
+    if (this.currentQuestion()?.id !== q.id) return;
 
     if (!result) {
+      btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg> অনুবাদ`;
       ui.toast('Traduzione non disponibile. Controlla la connessione.', 'error');
       return;
     }
@@ -439,6 +479,11 @@ const studyCtrl = {
 
   _applyTranslation(result, q) {
     this.currentTranslation = result;
+    this.translationVisible = true;
+
+    // Update button to "hide translation"
+    document.getElementById('btn-translate').innerHTML =
+      `<svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg> অনুবাদ লুকান`;
 
     // Show question translation
     document.getElementById('bn-question').textContent = result.question || '';
@@ -457,6 +502,29 @@ const studyCtrl = {
     // Show Bengali TTS if available
     if (ttsModule.hasBengali()) {
       document.getElementById('btn-tts-bn').classList.remove('hidden');
+    }
+  },
+
+  _toggleTranslation() {
+    const btn = document.getElementById('btn-translate');
+    const svgIcon = `<svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>`;
+
+    if (this.translationVisible) {
+      // Hide translation
+      document.getElementById('q-text-bn').classList.add('hidden');
+      document.querySelectorAll('#q-options .option-btn .option-bn').forEach(el => el.classList.add('hidden'));
+      document.getElementById('btn-tts-bn').classList.add('hidden');
+      this.translationVisible = false;
+      btn.innerHTML = `${svgIcon} অনুবাদ`;
+    } else {
+      // Show translation
+      document.getElementById('q-text-bn').classList.remove('hidden');
+      document.querySelectorAll('#q-options .option-btn .option-bn').forEach(el => {
+        if (el.textContent) el.classList.remove('hidden');
+      });
+      if (ttsModule.hasBengali()) document.getElementById('btn-tts-bn').classList.remove('hidden');
+      this.translationVisible = true;
+      btn.innerHTML = `${svgIcon} অনুবাদ লুকান`;
     }
   },
 
@@ -497,11 +565,23 @@ const testCtrl = {
   session: null,
 
   start() {
-    const { category, count, timer } = state.testConfig;
+    const { category, count, timer, source } = state.testConfig;
     const bookmarks = storage.getBookmarks();
 
     let pool;
-    if (category === 'bookmarks') {
+    if (category === 'errors') {
+      const wrongIds = Object.entries(storage.getProgress())
+        .filter(([, v]) => v.wrong > 0)
+        .map(([id]) => parseInt(id));
+      pool = QUESTIONS.filter(q => wrongIds.includes(q.id));
+      if (!pool.length) {
+        ui.toast('Nessun errore da ripassare! কোনো ভুল নেই! 🎉', 'success');
+        // Hide score screen if visible, return to home
+        ui.hideElement('test-score');
+        ui.showView('home');
+        return;
+      }
+    } else if (category === 'bookmarks') {
       pool = QUESTIONS.filter(q => bookmarks.includes(q.id));
     } else if (category === 'all') {
       pool = [...QUESTIONS];
@@ -525,11 +605,14 @@ const testCtrl = {
       timerInterval: null,
       timeLeft: 60,
       useTimer: timer,
+      source: source || 'test',
+      isErrorMode: category === 'errors',
     };
 
     ui.showElement('test-active');
     ui.hideElement('test-setup');
     ui.hideElement('test-score');
+    ui.updateQuickNoteBtn();
 
     this.renderTestQuestion();
   },
@@ -551,6 +634,25 @@ const testCtrl = {
     document.getElementById('btn-test-next').classList.add('hidden');
     document.getElementById('btn-test-skip').classList.remove('hidden');
 
+    // Translation state reset
+    s.currentTranslation = null;
+    s.translationVisible = false;
+
+    const hasTranslation = s.source === 'chapters' || s.source === 'errors';
+    const actionsEl = document.getElementById('test-q-actions');
+    const transSvg = `<svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>`;
+
+    if (hasTranslation) {
+      actionsEl.classList.remove('hidden');
+      document.getElementById('test-q-text-bn').classList.add('hidden');
+      document.getElementById('test-bn-question').textContent = '';
+      document.getElementById('btn-test-tts-bn').classList.add('hidden');
+      document.getElementById('btn-test-translate').innerHTML = `${transSvg} অনুবাদ`;
+    } else {
+      actionsEl.classList.add('hidden');
+      document.getElementById('test-q-text-bn').classList.add('hidden');
+    }
+
     const container = document.getElementById('test-q-options');
     container.innerHTML = '';
     const letters = ['A', 'B', 'C'];
@@ -558,10 +660,28 @@ const testCtrl = {
       const btn = document.createElement('button');
       btn.className = 'option-btn';
       btn.dataset.index = i;
-      btn.innerHTML = `<span class="option-letter">${letters[i]}</span><span>${opt}</span>`;
+      btn.innerHTML = `
+        <span class="option-letter">${letters[i]}</span>
+        <div class="option-content">
+          <div class="option-it">${opt}</div>
+          <div class="option-bn hidden"></div>
+        </div>`;
       btn.addEventListener('click', () => this.handleTestAnswer(i));
       container.appendChild(btn);
     });
+
+    // Pre-populate from cache if available, keep hidden
+    if (hasTranslation) {
+      const cached = translationModule.getCached(q.id);
+      if (cached) {
+        this._applyTestTranslation(cached, q);
+        document.getElementById('test-q-text-bn').classList.add('hidden');
+        document.querySelectorAll('#test-q-options .option-btn .option-bn').forEach(el => el.classList.add('hidden'));
+        document.getElementById('btn-test-tts-bn').classList.add('hidden');
+        document.getElementById('btn-test-translate').innerHTML = `${transSvg} অনুবাদ`;
+        s.translationVisible = false;
+      }
+    }
 
     // Timer
     if (s.useTimer) {
@@ -600,6 +720,9 @@ const testCtrl = {
     const q = s.questions[s.currentIndex];
     const correct = selectedIndex === q.correctIndex;
 
+    // Record to progress so chapter quiz + error quiz update stats/progress bars
+    if (selectedIndex !== null) storage.recordAnswer(q.id, correct);
+
     const btns = document.querySelectorAll('#test-q-options .option-btn');
     btns.forEach((btn, i) => {
       btn.disabled = true;
@@ -625,6 +748,84 @@ const testCtrl = {
 
     document.getElementById('btn-test-skip').classList.add('hidden');
     document.getElementById('btn-test-next').classList.remove('hidden');
+  },
+
+  async handleTestTranslate() {
+    const s = this.session;
+    const q = s.questions[s.currentIndex];
+    if (!q) return;
+
+    if (s.currentTranslation) {
+      this._toggleTestTranslation();
+      return;
+    }
+
+    const btn = document.getElementById('btn-test-translate');
+    const transSvg = `<svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>`;
+    btn.classList.add('loading');
+    btn.innerHTML = `${transSvg} অনুবাদ হচ্ছে...`;
+
+    const result = await translationModule.translate(q);
+
+    btn.classList.remove('loading');
+
+    // Guard: user may have moved to a different question while fetch was in-flight
+    if (s.questions[s.currentIndex]?.id !== q.id) return;
+
+    if (!result) {
+      btn.innerHTML = `${transSvg} অনুবাদ`;
+      ui.toast('Traduzione non disponibile. Controlla la connessione.', 'error');
+      return;
+    }
+
+    this._applyTestTranslation(result, q);
+  },
+
+  _applyTestTranslation(result, q) {
+    const s = this.session;
+    s.currentTranslation = result;
+    s.translationVisible = true;
+
+    const transSvg = `<svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>`;
+    document.getElementById('btn-test-translate').innerHTML = `${transSvg} অনুবাদ লুকান`;
+
+    document.getElementById('test-bn-question').textContent = result.question || '';
+    document.getElementById('test-q-text-bn').classList.remove('hidden');
+
+    const optBtns = document.querySelectorAll('#test-q-options .option-btn');
+    ['opt_0', 'opt_1', 'opt_2'].forEach((key, i) => {
+      const bnDiv = optBtns[i]?.querySelector('.option-bn');
+      if (bnDiv && result[key]) {
+        bnDiv.textContent = result[key];
+        bnDiv.classList.remove('hidden');
+      }
+    });
+
+    if (ttsModule.hasBengali()) {
+      document.getElementById('btn-test-tts-bn').classList.remove('hidden');
+    }
+  },
+
+  _toggleTestTranslation() {
+    const s = this.session;
+    const btn = document.getElementById('btn-test-translate');
+    const transSvg = `<svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>`;
+
+    if (s.translationVisible) {
+      document.getElementById('test-q-text-bn').classList.add('hidden');
+      document.querySelectorAll('#test-q-options .option-btn .option-bn').forEach(el => el.classList.add('hidden'));
+      document.getElementById('btn-test-tts-bn').classList.add('hidden');
+      s.translationVisible = false;
+      btn.innerHTML = `${transSvg} অনুবাদ`;
+    } else {
+      document.getElementById('test-q-text-bn').classList.remove('hidden');
+      document.querySelectorAll('#test-q-options .option-btn .option-bn').forEach(el => {
+        if (el.textContent) el.classList.remove('hidden');
+      });
+      if (ttsModule.hasBengali()) document.getElementById('btn-test-tts-bn').classList.remove('hidden');
+      s.translationVisible = true;
+      btn.innerHTML = `${transSvg} অনুবাদ লুকান`;
+    }
   },
 
   nextTestQuestion() {
@@ -668,13 +869,25 @@ const testCtrl = {
     const pct = Math.round((correct / s.questions.length) * 100);
     const passed = pct >= 70;
 
-    document.getElementById('score-title').textContent = passed
-      ? '✓ Promosso! উত্তীর্ণ!'
-      : '✗ Non promosso. অনুত্তীর্ণ।';
-    document.getElementById('score-display').textContent = `${pct}%`;
-    document.getElementById('score-display').style.color = passed ? 'var(--correct)' : 'var(--wrong)';
-    document.getElementById('score-detail').textContent =
-      `${correct} / ${s.questions.length} corrette`;
+    // In error mode: clear wrong count for each correctly answered question
+    if (s.isErrorMode) {
+      s.questions.forEach((q, i) => {
+        if (s.answers[i] === q.correctIndex) storage.clearWrong(q.id);
+      });
+      document.getElementById('score-title').textContent =
+        `${correct} / ${s.questions.length} ভুল সংশোধিত`;
+      document.getElementById('score-display').textContent = `${correct}`;
+      document.getElementById('score-display').style.color = correct > 0 ? 'var(--correct)' : 'var(--wrong)';
+      document.getElementById('score-detail').textContent = `${s.questions.length - correct} errori rimanenti / বাকি ভুল`;
+    } else {
+      document.getElementById('score-title').textContent = passed
+        ? '✓ Promosso! উত্তীর্ণ!'
+        : '✗ Non promosso. অনুত্তীর্ণ।';
+      document.getElementById('score-display').textContent = `${pct}%`;
+      document.getElementById('score-display').style.color = passed ? 'var(--correct)' : 'var(--wrong)';
+      document.getElementById('score-detail').textContent =
+        `${correct} / ${s.questions.length} corrette`;
+    }
 
     const wrongContainer = document.getElementById('score-wrong-list');
     wrongContainer.innerHTML = '';
@@ -698,6 +911,7 @@ const testCtrl = {
 
     ui.hideElement('test-active');
     ui.showElement('test-score');
+    ui.updateQuickNoteBtn();
   },
 };
 
@@ -775,6 +989,9 @@ const ui = {
     if (name === 'stats')     this.refreshStats();
     if (name === 'bookmarks') this.refreshBookmarks();
     if (name === 'settings')  this.refreshSettings();
+    if (name === 'chapters')  this.refreshChapters();
+    if (name === 'notebook')  this.refreshNotebook();
+    this.updateQuickNoteBtn();
   },
 
   showElement(id)  { document.getElementById(id)?.classList.remove('hidden'); },
@@ -917,6 +1134,99 @@ const ui = {
     });
   },
 
+  updateQuickNoteBtn() {
+    const btn = document.getElementById('btn-quick-note');
+    if (!btn) return;
+    const testActiveVisible = !document.getElementById('test-active')?.classList.contains('hidden');
+    const visible =
+      state.currentView === 'study' ||
+      (state.currentView === 'test' && testActiveVisible &&
+       testCtrl.session && testCtrl.session.source !== 'test');
+    btn.classList.toggle('hidden', !visible);
+  },
+
+  openNoteModal(questionContext) {
+    const overlay = document.getElementById('note-modal-overlay');
+    document.getElementById('note-modal-text').value = '';
+    const ctxEl = document.getElementById('note-modal-context');
+    if (questionContext) {
+      ctxEl.textContent = `Q${questionContext.id}: ${questionContext.text.slice(0, 80)}${questionContext.text.length > 80 ? '…' : ''}`;
+      ctxEl.classList.remove('hidden');
+      overlay.dataset.questionId = questionContext.id;
+      overlay.dataset.questionSnippet = questionContext.text.slice(0, 100);
+    } else {
+      ctxEl.classList.add('hidden');
+      delete overlay.dataset.questionId;
+      delete overlay.dataset.questionSnippet;
+    }
+    this.showElement('note-modal-overlay');
+    setTimeout(() => document.getElementById('note-modal-text').focus(), 50);
+  },
+
+  refreshNotebook() {
+    const listEl = document.getElementById('notebook-list');
+    if (!listEl) return;
+    const notes = storage.getNotes();
+    listEl.innerHTML = '';
+    if (!notes.length) {
+      listEl.innerHTML = `<div class="card"><p class="empty-msg">Nessuna nota. Clicca ✏ durante lo studio per aggiungerne una.<br><span class="bn-text">কোনো নোট নেই। পড়ার সময় ✏ বোতাম চাপুন।</span></p></div>`;
+      return;
+    }
+    notes.forEach(note => {
+      const div = document.createElement('div');
+      div.className = 'note-item card';
+      const date = new Date(note.timestamp).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' });
+      div.innerHTML = `
+        <div class="note-item-header">
+          <span class="note-date">${date}</span>
+          <button class="note-delete-btn" title="Elimina">✕</button>
+        </div>
+        ${note.questionSnippet ? `<div class="note-context">Q${note.questionId}: ${note.questionSnippet.slice(0, 80)}${note.questionSnippet.length > 80 ? '…' : ''}</div>` : ''}
+        <div class="note-text">${note.text.replace(/\n/g, '<br>')}</div>`;
+      div.querySelector('.note-delete-btn').addEventListener('click', () => {
+        storage.deleteNote(note.id);
+        this.refreshNotebook();
+      });
+      listEl.appendChild(div);
+    });
+  },
+
+  refreshChapters() {
+    const listEl = document.getElementById('chapters-list');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+    const progress = storage.getProgress();
+    CATEGORIES.forEach(cat => {
+      const catQs = QUESTIONS.filter(q => q.category === cat.slug);
+      const total = catQs.length;
+      const answered = catQs.filter(q => progress[q.id]).length;
+      const pct = total > 0 ? Math.round(answered / total * 100) : 0;
+
+      const div = document.createElement('div');
+      div.className = 'chapter-card card';
+      div.innerHTML = `
+        <div class="chapter-card-header">
+          <div>
+            <div class="chapter-title">${cat.label}</div>
+            <div class="chapter-bn">${cat.bn}</div>
+          </div>
+          <div class="chapter-count">${total} domande</div>
+        </div>
+        <div class="chapter-progress">
+          <div class="cat-bar-track" style="flex:1">
+            <div class="cat-bar-fill" style="width:${pct}%"></div>
+          </div>
+          <span class="cat-bar-pct">${pct}%</span>
+        </div>`;
+      div.addEventListener('click', () => {
+        state.testConfig = { category: cat.slug, count: 'all', timer: false, source: 'chapters' };
+        testCtrl.start();
+        ui.showView('test');
+      });
+      listEl.appendChild(div);
+    });
+  },
+
   refreshSettings() {
     const settings = storage.getSettings();
     const rateEl = document.getElementById('tts-rate');
@@ -965,6 +1275,12 @@ function wireEvents() {
     ui.showElement('test-setup');
     ui.hideElement('test-active');
     ui.hideElement('test-score');
+  });
+
+  document.getElementById('btn-error-quiz').addEventListener('click', () => {
+    state.testConfig = { category: 'errors', count: 'all', timer: false, source: 'errors' };
+    testCtrl.start();
+    if (testCtrl.session) ui.showView('test');
   });
 
   // Category filter pills
@@ -1042,12 +1358,28 @@ function wireEvents() {
     testCtrl.skipTestQuestion();
   });
 
+  document.getElementById('btn-test-translate').addEventListener('click', () => {
+    testCtrl.handleTestTranslate();
+  });
+
+  document.getElementById('btn-test-tts-it').addEventListener('click', () => {
+    const s = testCtrl.session;
+    if (s) ttsModule.speakItalian(s.questions[s.currentIndex].it.question);
+  });
+
+  document.getElementById('btn-test-tts-bn').addEventListener('click', () => {
+    const t = testCtrl.session?.currentTranslation;
+    if (t?.question) ttsModule.speakBengali(t.question);
+  });
+
   document.getElementById('btn-score-retry').addEventListener('click', () => {
-    testCtrl.start(); // re-run with same config
+    testCtrl.start(); // re-run with same config (errors mode rebuilds from current wrong list)
   });
 
   document.getElementById('btn-score-home').addEventListener('click', () => {
-    ui.showView('home');
+    const source = testCtrl.session?.source;
+    if (source === 'chapters') ui.showView('chapters');
+    else ui.showView('home');
   });
 
   // Stats
@@ -1099,6 +1431,45 @@ function wireEvents() {
       ui.refreshSettings();
       ui.toast('Cache svuotata. / ক্যাশ মুছে গেছে।');
     });
+  });
+
+  // Notebook — floating quick-note button
+  document.getElementById('btn-quick-note').addEventListener('click', () => {
+    let questionContext = null;
+    if (state.currentView === 'study') {
+      const q = studyCtrl.currentQuestion();
+      if (q) questionContext = { id: q.id, text: q.it.question };
+    } else if (state.currentView === 'test' && testCtrl.session) {
+      const s = testCtrl.session;
+      const q = s.questions[s.currentIndex];
+      if (q) questionContext = { id: q.id, text: q.it.question };
+    }
+    ui.openNoteModal(questionContext);
+  });
+
+  // Notebook — note modal: save / cancel
+  document.getElementById('btn-note-save').addEventListener('click', () => {
+    const overlay = document.getElementById('note-modal-overlay');
+    const text = document.getElementById('note-modal-text').value.trim();
+    if (!text) { ui.toast('Scrivi qualcosa prima di salvare.', 'error'); return; }
+    const note = { id: Date.now(), text, timestamp: Date.now() };
+    if (overlay.dataset.questionId) {
+      note.questionId = parseInt(overlay.dataset.questionId);
+      note.questionSnippet = overlay.dataset.questionSnippet || '';
+    }
+    storage.saveNote(note);
+    ui.hideElement('note-modal-overlay');
+    ui.toast('Nota salvata! নোট সংরক্ষিত!', 'success');
+    if (state.currentView === 'notebook') ui.refreshNotebook();
+  });
+
+  document.getElementById('btn-note-cancel').addEventListener('click', () => {
+    ui.hideElement('note-modal-overlay');
+  });
+
+  // Notebook — add note button inside notebook view
+  document.getElementById('btn-add-note').addEventListener('click', () => {
+    ui.openNoteModal(null);
   });
 }
 

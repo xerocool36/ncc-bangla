@@ -89,7 +89,12 @@ body {
 .nav-links {
   display: flex;
   gap: 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
+
+.nav-links::-webkit-scrollbar { display: none; }
 
 .nav-btn {
   display: flex;
@@ -397,26 +402,16 @@ input:checked + .toggle-slider::after { left: 21px; }
 }
 
 .q-translation {
-  background: var(--green-lt);
-  border-left: 3px solid var(--green);
-  border-radius: 0 8px 8px 0;
-  padding: 12px 14px;
+  border-left: 2px solid var(--green);
+  padding: 4px 0 4px 12px;
   margin-bottom: 12px;
 }
 
-.translation-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--green);
-  margin-bottom: 6px;
-  font-family: 'Noto Sans Bengali', 'Vrinda', sans-serif;
-}
-
 #bn-question {
-  font-size: 1.05rem;
-  line-height: 1.7;
+  font-size: 0.95rem;
+  line-height: 1.65;
   font-family: 'Noto Sans Bengali', 'Vrinda', sans-serif;
-  color: var(--text);
+  color: var(--text-muted);
 }
 
 .q-actions {
@@ -757,10 +752,152 @@ input[type="range"] {
 
 .modal-actions { display: flex; gap: 10px; }
 
-/* 21. Utility */
+/* 21. Notebook */
+.btn-float-note {
+  position: fixed;
+  bottom: 80px;
+  right: 16px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #5a3e0a;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  z-index: 50;
+  transition: var(--transition);
+}
+
+.btn-float-note:hover { background: #d4a83a; transform: scale(1.08); }
+.btn-float-note svg { width: 22px; height: 22px; fill: currentColor; }
+
+.note-textarea {
+  width: 100%;
+  min-height: 110px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--card);
+  resize: vertical;
+  margin-bottom: 16px;
+  line-height: 1.5;
+  display: block;
+}
+
+.note-textarea:focus { outline: none; border-color: var(--green); }
+
+.note-modal-context {
+  font-size: 0.78rem;
+  color: var(--green);
+  background: var(--green-lt);
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.note-item { margin-bottom: 0; }
+
+.note-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.note-date { font-size: 0.75rem; color: var(--text-muted); }
+
+.note-delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  transition: var(--transition);
+  line-height: 1;
+}
+
+.note-delete-btn:hover { color: var(--wrong); background: var(--wrong-bg); }
+
+.note-context {
+  font-size: 0.78rem;
+  color: var(--green);
+  background: var(--green-lt);
+  padding: 4px 8px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.note-text {
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 23. Chapter cards */
+.chapter-card {
+  cursor: pointer;
+  transition: var(--transition);
+  margin-bottom: 0;
+}
+
+.chapter-card:hover {
+  border-color: var(--green);
+  background: var(--green-lt);
+}
+
+.chapter-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+  gap: 10px;
+}
+
+.chapter-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.chapter-bn {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-family: 'Noto Sans Bengali', 'Vrinda', sans-serif;
+  margin-top: 2px;
+}
+
+.chapter-count {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  background: var(--bg);
+  padding: 3px 10px;
+  border-radius: 9999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+
+.chapter-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 24. Utility */
 .hidden { display: none !important; }
 
-/* 22. Responsive */
+/* 25. Responsive */
 @media (max-width: 600px) {
   :root { --nav-h: 52px; }
 
