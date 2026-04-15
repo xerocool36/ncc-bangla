@@ -3,28 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NCC Prep Bangla v2 — এনসিসি পরীক্ষা প্রস্তুতি</title>
+  <title>NCC Bangla — এনসিসি পরীক্ষা প্রস্তুতি</title>
   <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Nunito:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
 
   <!-- ═══════════ NAV ═══════════ -->
   <nav id="app-nav">
     <div class="nav-brand" data-nav="home">
-      <span class="nav-logo">🚗</span>
-      <span class="nav-title">NCC Prep Bangla v2</span>
+      <img src="logo.png" alt="NCC Bangla" class="nav-logo-img">
     </div>
     <div class="nav-links">
       <button class="nav-btn active" data-nav="home" title="Home">
         <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
         <span>Home</span>
       </button>
-      <button class="nav-btn" data-nav="study" title="Study">
-        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-        <span>Studio</span>
-      </button>
-      <button class="nav-btn" data-nav="stats" title="Statistics">
+<button class="nav-btn" data-nav="stats" title="Statistics">
         <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
         <span>Statistiche</span>
       </button>
@@ -50,7 +47,8 @@
   <!-- ═══════════ VIEW: HOME ═══════════ -->
   <div id="view-home" class="view active">
     <div class="home-header">
-      <h1>NCC Prep Bangla v2</h1>
+      <img src="logo.png" alt="NCC Bangla" class="home-logo">
+      <h1>NCC Bangla</h1>
       <p class="home-subtitle">এনসিসি পরীক্ষার প্রস্তুতি</p>
     </div>
 
@@ -200,45 +198,53 @@
   <div id="view-test" class="view">
 
     <!-- Test setup screen -->
-    <div id="test-setup" class="card">
-      <h2>Simulazione Esame</h2>
-      <p class="bn-text">পরীক্ষার অনুশীলন করুন — অনুবাদ ছাড়া</p>
-
-      <div class="form-group">
-        <label>Categoria / বিষয়</label>
-        <select id="test-cat-select">
-          <option value="all">Tutte le categorie</option>
-          <option value="mechanics">Meccanica del Veicolo</option>
-          <option value="road_safety">Sicurezza Stradale</option>
-          <option value="insurance">Assicurazione e Normativa</option>
-          <option value="ncc_regs">Normativa NCC/Taxi</option>
-          <option value="navigation">Navigazione</option>
-          <option value="advanced_systems">Sistemi Avanzati</option>
-        </select>
+    <div id="test-setup">
+      <div class="test-setup-hero card">
+        <div class="test-setup-icon">📋</div>
+        <h2>Simulazione Esame</h2>
+        <p class="bn-text">পরীক্ষার অনুশীলন করুন — অনুবাদ ছাড়া</p>
       </div>
 
-      <div class="form-group">
-        <label>Numero di domande / প্রশ্নের সংখ্যা</label>
-        <div class="count-pills">
-          <button class="pill active" data-count="10">10</button>
-          <button class="pill" data-count="20">20</button>
-          <button class="pill" data-count="30">30</button>
-          <button class="pill" data-count="50">50</button>
-          <button class="pill" data-count="all">Tutte</button>
+      <div class="card test-setup-body">
+        <div class="form-group">
+          <label>Categoria / বিষয়</label>
+          <select id="test-cat-select">
+            <option value="all">Tutte le categorie</option>
+            <option value="mechanics">Meccanica del Veicolo</option>
+            <option value="road_safety">Sicurezza Stradale</option>
+            <option value="insurance">Assicurazione e Normativa</option>
+            <option value="ncc_regs">Normativa NCC/Taxi</option>
+            <option value="navigation">Navigazione</option>
+            <option value="advanced_systems">Sistemi Avanzati</option>
+          </select>
         </div>
-      </div>
 
-      <div class="form-group">
-        <label class="toggle-label">
-          <input type="checkbox" id="test-timer-toggle">
-          <span class="toggle-slider"></span>
-          Timer (1 min per domanda)
-        </label>
-      </div>
+        <div class="form-group">
+          <label>Numero di domande / প্রশ্নের সংখ্যা</label>
+          <div class="count-pills">
+            <button class="pill active" data-count="10">10</button>
+            <button class="pill" data-count="20">20</button>
+            <button class="pill" data-count="30">30</button>
+            <button class="pill" data-count="50">50</button>
+            <button class="pill" data-count="all">Tutte</button>
+          </div>
+        </div>
 
-      <button class="btn btn-primary btn-large" id="btn-start-test-go">
-        Inizia la simulazione →
-      </button>
+        <div class="test-option-row" id="timer-toggle-row">
+          <div class="test-option-info">
+            <span class="test-option-title">⏱ Timer</span>
+            <span class="test-option-desc">1 minuto per domanda / প্রতি প্রশ্নে ১ মিনিট</span>
+          </div>
+          <label class="toggle-label" style="flex-shrink:0">
+            <input type="checkbox" id="test-timer-toggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <button class="btn btn-primary btn-large" id="btn-start-test-go">
+          Inizia la simulazione →
+        </button>
+      </div>
     </div>
 
     <!-- Active test screen -->
@@ -334,11 +340,6 @@
       <div id="stats-recent-wrong"></div>
     </div>
 
-    <div class="card danger-zone">
-      <h3>Azzera progresso / অগ্রগতি মুছুন</h3>
-      <p>Questa azione è irreversibile. / এটি পূর্বাবস্থায় ফেরানো যাবে না।</p>
-      <button class="btn btn-danger" id="btn-reset-progress">Azzera tutto</button>
-    </div>
   </div>
 
   <!-- ═══════════ VIEW: BOOKMARKS ═══════════ -->
@@ -358,46 +359,119 @@
 
   <!-- ═══════════ VIEW: SETTINGS ═══════════ -->
   <div id="view-settings" class="view">
-    <div class="card">
-      <h2>Impostazioni / সেটিংস</h2>
 
-      <div class="form-group">
-        <label>Velocità lettura (TTS) / পড়ার গতি</label>
-        <div class="slider-row">
-          <span>Lento</span>
-          <input type="range" id="tts-rate" min="0.5" max="1.5" step="0.1" value="0.85">
-          <span>Veloce</span>
-        </div>
-        <span class="slider-val" id="tts-rate-val">0.85×</span>
+    <!-- Header -->
+    <div class="settings-hero card">
+      <div class="settings-hero-icon">⚙️</div>
+      <h2>Impostazioni</h2>
+      <p class="bn-text">সেটিংস</p>
+    </div>
+
+    <!-- Audio section -->
+    <div class="settings-section card">
+      <div class="settings-section-title">
+        <span class="settings-section-icon">🔊</span>
+        <span>Audio / অডিও</span>
       </div>
 
-      <div class="form-group">
-        <label>Voce italiana / ইতালীয় ভয়েস</label>
-        <select id="tts-voice-select">
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <span class="settings-row-label">Velocità lettura / পড়ার গতি</span>
+          <span class="settings-row-desc" id="tts-rate-val">0.85×</span>
+        </div>
+        <div class="slider-row" style="flex:1; max-width:160px">
+          <span class="slider-edge">🐢</span>
+          <input type="range" id="tts-rate" min="0.5" max="1.5" step="0.1" value="0.85">
+          <span class="slider-edge">🐇</span>
+        </div>
+      </div>
+
+      <div class="settings-divider"></div>
+
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <span class="settings-row-label">Voce italiana / ইতালীয় ভয়েস</span>
+          <span class="settings-row-desc">Voce sintetizzata del browser</span>
+        </div>
+        <select id="tts-voice-select" class="settings-select">
           <option value="">Predefinita</option>
         </select>
       </div>
+    </div>
 
-      <div class="form-group">
-        <label>Cache traduzioni / অনুবাদ ক্যাশ</label>
-        <div class="cache-info">
-          <span id="cache-size">0 traduzioni in cache</span>
-          <button class="btn btn-ghost btn-sm" id="btn-clear-cache">Svuota cache</button>
-        </div>
+    <!-- Data section -->
+    <div class="settings-section card">
+      <div class="settings-section-title">
+        <span class="settings-section-icon">💾</span>
+        <span>Dati / ডেটা</span>
       </div>
 
-      <div class="form-group">
-        <h3>Come usare questa app / এই অ্যাপ কীভাবে ব্যবহার করবেন</h3>
-        <div class="help-text bn-text">
-          <p>১. প্রতিটি প্রশ্ন পড়ুন এবং সঠিক উত্তর বেছে নিন।</p>
-          <p>২. "অনুবাদ" বোতাম চাপলে বাংলায় অনুবাদ দেখাবে।</p>
-          <p>৩. "Ascolta IT" চাপলে ইতালীয় ভাষায় পড়ে শোনাবে।</p>
-          <p>৪. ⭐ চাপলে কঠিন প্রশ্ন সংরক্ষিত হবে।</p>
-          <p>৫. "Ripetizione spaziata" চালু করলে ভুল প্রশ্ন বারবার আসবে।</p>
-          <p>৬. "Simulazione esame" দিয়ে আসল পরীক্ষার মতো অনুশীলন করুন।</p>
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <span class="settings-row-label">Cache traduzioni / অনুবাদ ক্যাশ</span>
+          <span class="settings-row-desc" id="cache-size">0 traduzioni in cache</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="btn-clear-cache">Svuota</button>
+      </div>
+    </div>
+
+    <!-- How to use section -->
+    <div class="settings-section card">
+      <div class="settings-section-title">
+        <span class="settings-section-icon">📖</span>
+        <span>Come usare / কীভাবে ব্যবহার করবেন</span>
+      </div>
+
+      <div class="help-steps">
+        <div class="help-step">
+          <span class="help-step-num">১</span>
+          <span class="help-step-text bn-text">প্রতিটি প্রশ্ন পড়ুন এবং সঠিক উত্তর বেছে নিন।</span>
+        </div>
+        <div class="help-step">
+          <span class="help-step-num">২</span>
+          <span class="help-step-text bn-text">"অনুবাদ" বোতাম চাপলে বাংলায় অনুবাদ দেখাবে।</span>
+        </div>
+        <div class="help-step">
+          <span class="help-step-num">৩</span>
+          <span class="help-step-text bn-text">"Ascolta IT" চাপলে ইতালীয় ভাষায় পড়ে শোনাবে।</span>
+        </div>
+        <div class="help-step">
+          <span class="help-step-num">৪</span>
+          <span class="help-step-text bn-text">⭐ চাপলে কঠিন প্রশ্ন সংরক্ষিত হবে।</span>
+        </div>
+        <div class="help-step">
+          <span class="help-step-num">৫</span>
+          <span class="help-step-text bn-text">"Ripetizione spaziata" চালু করলে ভুল প্রশ্ন বারবার আসবে।</span>
+        </div>
+        <div class="help-step">
+          <span class="help-step-num">৬</span>
+          <span class="help-step-text bn-text">"Simulazione esame" দিয়ে আসল পরীক্ষার মতো অনুশীলন করুন।</span>
         </div>
       </div>
     </div>
+
+    <!-- Danger zone -->
+    <div class="settings-section card settings-danger-section">
+      <div class="settings-section-title">
+        <span class="settings-section-icon">⚠️</span>
+        <span>Zona pericolosa / বিপজ্জনক অঞ্চল</span>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <span class="settings-row-label">Azzera progresso / অগ্রগতি মুছুন</span>
+          <span class="settings-row-desc bn-text">সমস্ত উত্তর, পরিসংখ্যান এবং বুকমার্ক মুছে যাবে।</span>
+        </div>
+        <button class="btn btn-danger btn-sm" id="btn-reset-progress-settings">Azzera</button>
+      </div>
+    </div>
+
+    <!-- App info -->
+    <div class="settings-app-info">
+      <img src="logo.png" alt="NCC Bangla" class="settings-app-logo">
+      <span class="settings-app-name">NCC Bangla</span>
+      <span class="settings-app-version">এনসিসি পরীক্ষা প্রস্তুতি</span>
+    </div>
+
   </div>
 
   <!-- ═══════════ FLOATING NOTE BUTTON ═══════════ -->

@@ -854,6 +854,20 @@ const testCtrl = {
     const s = this.session;
     clearInterval(s.timerInterval);
 
+    function animateScoreCount(el, target, suffix) {
+      el.textContent = '0' + suffix;
+      const duration = 800;
+      const start = performance.now();
+      function tick(now) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = Math.round(eased * target) + suffix;
+        if (progress < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
     let correct = 0;
     const wrongList = [];
 
@@ -876,15 +890,17 @@ const testCtrl = {
       });
       document.getElementById('score-title').textContent =
         `${correct} / ${s.questions.length} ভুল সংশোধিত`;
-      document.getElementById('score-display').textContent = `${correct}`;
-      document.getElementById('score-display').style.color = correct > 0 ? 'var(--correct)' : 'var(--wrong)';
+      const dispEl1 = document.getElementById('score-display');
+      dispEl1.style.color = correct > 0 ? 'var(--correct)' : 'var(--wrong)';
+      animateScoreCount(dispEl1, correct, '');
       document.getElementById('score-detail').textContent = `${s.questions.length - correct} errori rimanenti / বাকি ভুল`;
     } else {
       document.getElementById('score-title').textContent = passed
         ? '✓ Promosso! উত্তীর্ণ!'
         : '✗ Non promosso. অনুত্তীর্ণ।';
-      document.getElementById('score-display').textContent = `${pct}%`;
-      document.getElementById('score-display').style.color = passed ? 'var(--correct)' : 'var(--wrong)';
+      const dispEl2 = document.getElementById('score-display');
+      dispEl2.style.color = passed ? 'var(--correct)' : 'var(--wrong)';
+      animateScoreCount(dispEl2, pct, '%');
       document.getElementById('score-detail').textContent =
         `${correct} / ${s.questions.length} corrette`;
     }
@@ -975,23 +991,38 @@ const ui = {
   toastTimer: null,
 
   showView(name) {
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    const el = document.getElementById(`view-${name}`);
-    if (el) el.classList.add('active');
+    const prev = document.querySelector('.view.active');
+    const activate = () => {
+      document.querySelectorAll('.view').forEach(v => {
+        v.classList.remove('active');
+        v.style.opacity = '';
+        v.style.transition = '';
+      });
+      const el = document.getElementById(`view-${name}`);
+      if (el) el.classList.add('active');
 
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.nav === name);
-    });
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.nav === name);
+      });
 
-    state.currentView = name;
+      state.currentView = name;
 
-    if (name === 'home')      this.refreshHome();
-    if (name === 'stats')     this.refreshStats();
-    if (name === 'bookmarks') this.refreshBookmarks();
-    if (name === 'settings')  this.refreshSettings();
-    if (name === 'chapters')  this.refreshChapters();
-    if (name === 'notebook')  this.refreshNotebook();
-    this.updateQuickNoteBtn();
+      if (name === 'home')      this.refreshHome();
+      if (name === 'stats')     this.refreshStats();
+      if (name === 'bookmarks') this.refreshBookmarks();
+      if (name === 'settings')  this.refreshSettings();
+      if (name === 'chapters')  this.refreshChapters();
+      if (name === 'notebook')  this.refreshNotebook();
+      this.updateQuickNoteBtn();
+    };
+
+    if (prev && prev.id !== `view-${name}`) {
+      prev.style.transition = 'opacity 0.15s ease';
+      prev.style.opacity = '0';
+      setTimeout(activate, 150);
+    } else {
+      activate();
+    }
   },
 
   showElement(id)  { document.getElementById(id)?.classList.remove('hidden'); },
@@ -1346,6 +1377,14 @@ function wireEvents() {
     state.testConfig.timer = e.target.checked;
   });
 
+  // Make the whole timer row clickable (not just the small toggle)
+  document.getElementById('timer-toggle-row').addEventListener('click', e => {
+    if (e.target.closest('label')) return; // label handles it natively
+    const cb = document.getElementById('test-timer-toggle');
+    cb.checked = !cb.checked;
+    cb.dispatchEvent(new Event('change'));
+  });
+
   document.getElementById('btn-start-test-go').addEventListener('click', () => {
     testCtrl.start();
   });
@@ -1382,8 +1421,7 @@ function wireEvents() {
     else ui.showView('home');
   });
 
-  // Stats
-  document.getElementById('btn-reset-progress').addEventListener('click', () => {
+  function doResetProgress() {
     ui.confirm(
       'Sei sicuro? Tutti i progressi verranno cancellati.\nআপনি কি নিশ্চিত? সমস্ত অগ্রগতি মুছে যাবে।',
       () => {
@@ -1395,7 +1433,10 @@ function wireEvents() {
         ui.toast('Progresso azzerato. / অগ্রগতি মুছে গেছে।');
       }
     );
-  });
+  }
+
+  // Settings
+  document.getElementById('btn-reset-progress-settings').addEventListener('click', doResetProgress);
 
   // Bookmarks — study bookmarked
   document.getElementById('btn-study-bookmarks').addEventListener('click', () => {
@@ -1495,5 +1536,68 @@ document.addEventListener('DOMContentLoaded', () => {
   ttsModule.init();
   wireEvents();
   studyCtrl.init();
+  makeDraggableNoteBtn();
   ui.showView('home');
 });
+
+function makeDraggableNoteBtn() {
+  const el = document.getElementById('btn-quick-note');
+  if (!el) return;
+
+  // Restore saved position
+  const saved = JSON.parse(localStorage.getItem('noteBtn_pos') || 'null');
+  if (saved) {
+    el.style.right  = Math.max(8, saved.right)  + 'px';
+    el.style.bottom = Math.max(8, saved.bottom) + 'px';
+  }
+
+  let startClientX, startClientY, startRight, startBottom, moved = false;
+
+  function dragStart(cx, cy) {
+    const rect = el.getBoundingClientRect();
+    startClientX = cx;
+    startClientY = cy;
+    startRight  = window.innerWidth  - rect.right;
+    startBottom = window.innerHeight - rect.bottom;
+    moved = false;
+    el.style.transition = 'none';
+    el.style.animation  = 'none';
+  }
+
+  function dragMove(cx, cy) {
+    const dx = cx - startClientX;
+    const dy = cy - startClientY;
+    if (!moved && Math.hypot(dx, dy) < 6) return;
+    moved = true;
+    el.style.right  = Math.max(8, startRight  - dx) + 'px';
+    el.style.bottom = Math.max(8, startBottom - dy) + 'px';
+  }
+
+  function dragEnd() {
+    if (moved) {
+      const rect = el.getBoundingClientRect();
+      localStorage.setItem('noteBtn_pos', JSON.stringify({
+        right:  Math.max(8, window.innerWidth  - rect.right),
+        bottom: Math.max(8, window.innerHeight - rect.bottom)
+      }));
+      el.style.transition = '';
+      el.style.animation  = '';
+    }
+  }
+
+  // Mouse
+  el.addEventListener('mousedown', e => { dragStart(e.clientX, e.clientY); e.preventDefault(); });
+  document.addEventListener('mousemove', e => { if (startClientX !== undefined) dragMove(e.clientX, e.clientY); });
+  document.addEventListener('mouseup', () => { if (startClientX !== undefined) { dragEnd(); startClientX = undefined; } });
+
+  // Touch
+  el.addEventListener('touchstart', e => { const t = e.touches[0]; dragStart(t.clientX, t.clientY); }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (startClientX !== undefined && moved) e.preventDefault();
+    if (startClientX !== undefined) { const t = e.touches[0]; dragMove(t.clientX, t.clientY); }
+  }, { passive: false });
+  document.addEventListener('touchend', () => { if (startClientX !== undefined) { dragEnd(); startClientX = undefined; } });
+
+  // Swallow click if it was a drag
+  el.addEventListener('click', e => { if (moved) { e.stopImmediatePropagation(); moved = false; } }, true);
+}
