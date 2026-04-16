@@ -138,13 +138,16 @@
     </div>
 
     <!-- Study controls bar -->
-    <div class="study-controls">
+    <div class="study-controls" id="study-controls-bar">
       <label class="toggle-label">
         <input type="checkbox" id="spaced-rep-toggle">
         <span class="toggle-slider"></span>
         Ripetizione spaziata
       </label>
       <span class="study-pos" id="study-pos">1 / 515</span>
+      <button class="btn btn-ghost btn-sm exit-session-btn" id="btn-exit-study" title="Esci dalla sessione">
+        ✕ Esci
+      </button>
     </div>
 
     <!-- Question card -->
@@ -191,6 +194,50 @@
       <button class="btn btn-ghost" id="btn-prev">← Precedente</button>
       <button class="btn btn-ghost" id="btn-skip">Salta →</button>
       <button class="btn btn-primary hidden" id="btn-next">Prossima →</button>
+    </div>
+
+    <!-- Study session result screen -->
+    <div id="study-result" class="hidden">
+      <div id="study-result-confetti"></div>
+
+      <div class="result-hero card">
+        <div class="result-ring-wrap">
+          <svg class="result-ring" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="45" class="ring-bg"/>
+            <circle cx="50" cy="50" r="45" id="study-ring-circle" class="ring-fill"/>
+          </svg>
+          <div id="study-result-score" class="score-big">0%</div>
+        </div>
+        <h2 id="study-result-title"></h2>
+        <p id="study-result-subtitle" class="bn-text"></p>
+      </div>
+
+      <div class="result-stats-row card">
+        <div class="stat-row">
+          <div class="stat-box">
+            <span class="stat-num" id="rs-total">0</span>
+            <span class="stat-label">Viste / দেখা</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-num" id="rs-correct">0</span>
+            <span class="stat-label">Corrette / সঠিক</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-num" id="rs-wrong">0</span>
+            <span class="stat-label">Errate / ভুল</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card hidden" id="study-result-wrong-section">
+        <h3>Da rivedere / পুনরায় দেখুন</h3>
+        <div id="study-result-wrong-list"></div>
+      </div>
+
+      <div class="result-actions">
+        <button class="btn btn-primary btn-large" id="btn-study-restart">🔄 Ricomincia</button>
+        <button class="btn btn-ghost btn-large" id="btn-study-result-home">Home</button>
+      </div>
     </div>
   </div>
 
@@ -252,6 +299,9 @@
       <div class="test-header">
         <span class="test-pos" id="test-pos">1 / 20</span>
         <span class="test-timer hidden" id="test-timer">1:00</span>
+        <button class="btn btn-ghost btn-sm exit-session-btn" id="btn-exit-test" title="Termina test">
+          ✕ Esci
+        </button>
       </div>
 
       <div class="question-card card">

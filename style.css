@@ -1543,3 +1543,156 @@ input[type="range"] {
   .stat-num { font-size: 1.2rem; }
   .home-header h1 { font-size: 1.4rem; }
 }
+
+/* ══════════════════════════════════════
+   Exit button
+══════════════════════════════════════ */
+.exit-session-btn {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  border-color: transparent;
+  background: transparent;
+  flex-shrink: 0;
+}
+.exit-session-btn:hover {
+  color: var(--wrong);
+  border-color: rgba(193,18,31,0.2);
+  background: var(--wrong-bg);
+  transform: none;
+}
+
+/* ══════════════════════════════════════
+   Study result screen
+══════════════════════════════════════ */
+#study-result {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+/* Staggered entrance for result cards */
+#study-result .result-hero      { animation: viewEnter 0.4s ease both; }
+#study-result .result-stats-row { animation: viewEnter 0.4s 0.1s ease both; }
+#study-result .result-actions   { animation: viewEnter 0.4s 0.25s ease both; }
+#study-result #study-result-wrong-section { animation: viewEnter 0.4s 0.18s ease both; }
+
+.result-hero {
+  text-align: center;
+  padding: 32px 20px 24px;
+}
+
+.result-hero h2 {
+  font-size: 1.25rem;
+  margin: 0 0 6px;
+}
+
+.result-ring-wrap {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  margin: 0 auto 20px;
+}
+
+.result-ring {
+  width: 140px;
+  height: 140px;
+  transform: rotate(-90deg);
+}
+
+.result-ring .ring-bg {
+  fill: none;
+  stroke: rgba(0,0,0,0.07);
+  stroke-width: 8;
+}
+
+.result-ring .ring-fill {
+  fill: none;
+  stroke: var(--green);
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-dasharray: 283;
+  stroke-dashoffset: 283;
+}
+
+.result-ring-wrap .score-big {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.result-stats-row .stat-row {
+  margin-bottom: 0;
+}
+
+.result-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ══════════════════════════════════════
+   Confetti
+══════════════════════════════════════ */
+.confetti-piece {
+  position: fixed;
+  top: -14px;
+  pointer-events: none;
+  z-index: 9999;
+  animation: confettiFall linear forwards;
+}
+
+@keyframes confettiFall {
+  0%   { opacity: 1; }
+  75%  { opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+
+/* ══════════════════════════════════════
+   Trophy popup
+══════════════════════════════════════ */
+.trophy-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  z-index: 9998;
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 28px 40px;
+  text-align: center;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+  pointer-events: none;
+}
+
+.trophy-popup .trophy-icon {
+  font-size: 3.5rem;
+  display: block;
+  line-height: 1.2;
+}
+
+.trophy-popup .trophy-msg {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--green);
+  margin-top: 10px;
+}
+
+.trophy-popup.show {
+  animation: trophyBounce 2s ease forwards;
+}
+
+@keyframes trophyBounce {
+  0%   { transform: translate(-50%,-50%) scale(0);    opacity: 0; }
+  10%  { transform: translate(-50%,-50%) scale(1.25); opacity: 1; }
+  20%  { transform: translate(-50%,-50%) scale(0.92); opacity: 1; }
+  28%  { transform: translate(-50%,-50%) scale(1.06); opacity: 1; }
+  36%  { transform: translate(-50%,-50%) scale(1);    opacity: 1; }
+  75%  { transform: translate(-50%,-50%) scale(1);    opacity: 1; }
+  100% { transform: translate(-50%,-50%) scale(0.8);  opacity: 0; }
+}

@@ -312,8 +312,10 @@ const spacedRep = {
 const studyCtrl = {
   currentTranslation: null,
   translationVisible: false,
+  sessionStats: { total: 0, correct: 0, wrong: [] },
 
   init() {
+    this.sessionStats = { total: 0, correct: 0, wrong: [] };
     this.rebuildQueue();
     this.renderQuestion();
   },
@@ -418,6 +420,14 @@ const studyCtrl = {
     const correct = selectedIndex === q.correctIndex;
 
     storage.recordAnswer(q.id, correct);
+
+    // Track session stats
+    this.sessionStats.total++;
+    if (correct) {
+      this.sessionStats.correct++;
+    } else {
+      this.sessionStats.wrong.push(q);
+    }
 
     // Style buttons
     const btns = document.querySelectorAll('#q-options .option-btn');
@@ -533,7 +543,7 @@ const studyCtrl = {
       state.studyIndex++;
       this.renderQuestion();
     } else {
-      ui.toast('Fine della lista! দারুণ! সব প্রশ্ন শেষ।', 'success');
+      this.showResult();
     }
   },
 
@@ -546,6 +556,91 @@ const studyCtrl = {
 
   skip() {
     this.next();
+  },
+
+  showResult() {
+    const stats = this.sessionStats;
+    const total   = stats.total;
+    const correct = stats.correct;
+    const pct     = total > 0 ? Math.round(correct / total * 100) : 0;
+
+    // Hide study UI
+    document.getElementById('category-filter').classList.add('hidden');
+    document.getElementById('study-controls-bar').classList.add('hidden');
+    document.getElementById('question-card').classList.add('hidden');
+    document.querySelector('#view-study .q-nav').classList.add('hidden');
+
+    // Show result panel
+    document.getElementById('study-result').classList.remove('hidden');
+
+    // Title + subtitle
+    let title, subtitle;
+    if (total === 0) {
+      title    = 'Nessuna risposta';
+      subtitle = 'কোনো প্রশ্নের উত্তর দেওয়া হয়নি।';
+    } else if (pct >= 80) {
+      title    = 'Ottimo! Eccellente! 🏆';
+      subtitle = 'চমৎকার! তুমি খুব ভালো করেছ!';
+    } else if (pct >= 60) {
+      title    = 'Buon lavoro! 👍';
+      subtitle = 'ভালো কাজ! আরও অনুশীলন করো।';
+    } else {
+      title    = 'Continua a studiare 📚';
+      subtitle = 'চালিয়ে যাও! অনুশীলনই সাফল্যের চাবিকাঠি।';
+    }
+    document.getElementById('study-result-title').textContent    = title;
+    document.getElementById('study-result-subtitle').textContent = subtitle;
+
+    // Stats row
+    document.getElementById('rs-total').textContent   = total;
+    document.getElementById('rs-correct').textContent = correct;
+    document.getElementById('rs-wrong').textContent   = stats.wrong.length;
+
+    // Animated score counter
+    const scoreEl = document.getElementById('study-result-score');
+    animateScoreCount(scoreEl, pct, '%');
+
+    // SVG ring animation
+    const ringCircle = document.getElementById('study-ring-circle');
+    if (ringCircle) {
+      const circumference = 2 * Math.PI * 45;
+      const targetOffset  = circumference * (1 - pct / 100);
+      const ringColor     = pct >= 70 ? 'var(--correct)' : pct >= 50 ? '#f4c430' : 'var(--wrong)';
+      ringCircle.style.stroke          = ringColor;
+      scoreEl.style.color              = ringColor;
+      ringCircle.style.strokeDasharray  = circumference;
+      ringCircle.style.strokeDashoffset = circumference;
+      requestAnimationFrame(function() {
+        ringCircle.style.transition      = 'stroke-dashoffset 1s ease';
+        ringCircle.style.strokeDashoffset = targetOffset;
+      });
+    }
+
+    // Wrong questions list
+    const wrongSection = document.getElementById('study-result-wrong-section');
+    const wrongList    = document.getElementById('study-result-wrong-list');
+    wrongList.innerHTML = '';
+    if (stats.wrong.length) {
+      wrongSection.classList.remove('hidden');
+      const letters = ['A', 'B', 'C'];
+      stats.wrong.slice(0, 20).forEach(function(q) {
+        const div = document.createElement('div');
+        div.className = 'score-wrong-item';
+        div.innerHTML =
+          '<div class="score-wrong-q">Q' + q.id + ': ' + q.it.question + '</div>' +
+          '<div class="score-wrong-correct">✓ ' + letters[q.correctIndex] + '. ' + q.it.options[q.correctIndex] + '</div>';
+        wrongList.appendChild(div);
+      });
+    } else {
+      wrongSection.classList.add('hidden');
+    }
+
+    // Celebrations
+    if (total > 0) {
+      if (pct >= 80) showTrophyPopup();
+      if (pct >= 60) fireConfetti();
+      showBadges(total, pct);
+    }
   },
 
   jumpTo(questionId) {
@@ -561,6 +656,21 @@ const studyCtrl = {
 // ─────────────────────────────────────────
 // 8. Practice Test controller
 // ─────────────────────────────────────────
+
+function animateScoreCount(el, target, suffix) {
+  el.textContent = '0' + suffix;
+  const duration = 800;
+  const start = performance.now();
+  function tick(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(eased * target) + suffix;
+    if (progress < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
 const testCtrl = {
   session: null,
 
@@ -854,20 +964,6 @@ const testCtrl = {
     const s = this.session;
     clearInterval(s.timerInterval);
 
-    function animateScoreCount(el, target, suffix) {
-      el.textContent = '0' + suffix;
-      const duration = 800;
-      const start = performance.now();
-      function tick(now) {
-        const elapsed = now - start;
-        const progress = Math.min(elapsed / duration, 1);
-        const eased = 1 - Math.pow(1 - progress, 3);
-        el.textContent = Math.round(eased * target) + suffix;
-        if (progress < 1) requestAnimationFrame(tick);
-      }
-      requestAnimationFrame(tick);
-    }
-
     let correct = 0;
     const wrongList = [];
 
@@ -880,7 +976,7 @@ const testCtrl = {
       }
     });
 
-    const pct = Math.round((correct / s.questions.length) * 100);
+    const pct = s.questions.length > 0 ? Math.round((correct / s.questions.length) * 100) : 0;
     const passed = pct >= 70;
 
     // In error mode: clear wrong count for each correctly answered question
@@ -932,7 +1028,57 @@ const testCtrl = {
 };
 
 // ─────────────────────────────────────────
-// 9. Stats module
+// 9. Celebration helpers
+// ─────────────────────────────────────────
+
+function fireConfetti() {
+  var colors = ['#1a6b3a', '#2ecc71', '#f4c430', '#e74c3c', '#3498db', '#9b59b6'];
+  for (var i = 0; i < 45; i++) {
+    var el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.left             = (Math.random() * 100) + 'vw';
+    el.style.background       = colors[Math.floor(Math.random() * colors.length)];
+    el.style.animationDuration = (1.5 + Math.random() * 2) + 's';
+    el.style.animationDelay   = (Math.random() * 0.8) + 's';
+    var size = (6 + Math.random() * 8) + 'px';
+    el.style.width  = size;
+    el.style.height = size;
+    el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    el.style.transform = 'rotate(' + (Math.random() * 360) + 'deg)';
+    document.body.appendChild(el);
+    el.addEventListener('animationend', function() { this.remove(); });
+  }
+}
+
+function showTrophyPopup() {
+  var popup = document.createElement('div');
+  popup.className = 'trophy-popup';
+  popup.innerHTML = '<span class="trophy-icon">🏆</span><div class="trophy-msg">Fantastico! / অসাধারণ!</div>';
+  document.body.appendChild(popup);
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      popup.classList.add('show');
+    });
+  });
+  setTimeout(function() { popup.remove(); }, 2000);
+}
+
+function showBadges(total, pct) {
+  var badges = [];
+  if (!localStorage.getItem('ncc_first_session')) {
+    localStorage.setItem('ncc_first_session', '1');
+    badges.push('Prima sessione completata! 🎉');
+  }
+  badges.push(total + ' domande completate! 🎯');
+  if (pct >= 70) badges.push('Accuratezza alta! 📈');
+
+  badges.forEach(function(msg, i) {
+    setTimeout(function() { ui.toast(msg, 'success'); }, 400 + i * 600);
+  });
+}
+
+// ─────────────────────────────────────────
+// 10. Stats module
 // ─────────────────────────────────────────
 const statsModule = {
   computeOverall() {
@@ -985,7 +1131,7 @@ const statsModule = {
 };
 
 // ─────────────────────────────────────────
-// 10. UI module
+// 11. UI module
 // ─────────────────────────────────────────
 const ui = {
   toastTimer: null,
@@ -1270,7 +1416,7 @@ const ui = {
 };
 
 // ─────────────────────────────────────────
-// 11. Event Listeners
+// 12. Event Listeners
 // ─────────────────────────────────────────
 function wireEvents() {
   // Nav
@@ -1358,6 +1504,45 @@ function wireEvents() {
   document.getElementById('btn-prev').addEventListener('click', () => studyCtrl.prev());
   document.getElementById('btn-skip').addEventListener('click', () => studyCtrl.skip());
   document.getElementById('btn-next').addEventListener('click', () => studyCtrl.next());
+
+  // Study exit + result buttons
+  document.getElementById('btn-exit-study').addEventListener('click', () => {
+    if (studyCtrl.sessionStats.total === 0) {
+      ui.toast('Nessuna risposta ancora. / এখনো কোনো উত্তর নেই।');
+      ui.showView('home');
+    } else {
+      ui.confirm(
+        'Vuoi uscire dalla sessione? I progressi sono salvati.\nসেশন শেষ করবেন? অগ্রগতি সংরক্ষিত।',
+        () => studyCtrl.showResult()
+      );
+    }
+  });
+
+  function resetStudyView() {
+    document.getElementById('study-result').classList.add('hidden');
+    document.getElementById('category-filter').classList.remove('hidden');
+    document.getElementById('study-controls-bar').classList.remove('hidden');
+    document.getElementById('question-card').classList.remove('hidden');
+    document.querySelector('#view-study .q-nav').classList.remove('hidden');
+  }
+
+  document.getElementById('btn-study-restart').addEventListener('click', () => {
+    resetStudyView();
+    studyCtrl.init();
+  });
+
+  document.getElementById('btn-study-result-home').addEventListener('click', () => {
+    resetStudyView();
+    ui.showView('home');
+  });
+
+  // Test exit button
+  document.getElementById('btn-exit-test').addEventListener('click', () => {
+    ui.confirm(
+      'Vuoi terminare il test anticipatamente?\nপরীক্ষা শেষ করবেন?',
+      () => testCtrl.showScore()
+    );
+  });
 
   // Practice test setup
   document.querySelectorAll('.count-pills .pill').forEach(pill => {
@@ -1515,7 +1700,7 @@ function wireEvents() {
 }
 
 // ─────────────────────────────────────────
-// 12. App init
+// 13. App init
 // ─────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   if (typeof QUESTIONS === 'undefined' || !QUESTIONS.length) {
