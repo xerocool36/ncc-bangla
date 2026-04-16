@@ -5,6 +5,12 @@
 /* 1. Reset + Custom Properties */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Global mobile tap improvements */
+button, a, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
 :root {
   --green:    #1a6b3a;
   --green-lt: #e8f5ee;
@@ -1163,6 +1169,8 @@ input[type="range"] {
   z-index: 999;
   box-shadow: 0 4px 20px rgba(0,0,0,0.28);
   white-space: nowrap;
+  max-width: calc(100vw - 32px);
+  text-align: center;
   animation: toastIn 0.28s var(--smooth) forwards;
 }
 
@@ -1434,6 +1442,8 @@ input[type="range"] {
   /* Push content above bottom nav */
   .view {
     padding-bottom: calc(var(--bottom-nav-h) + 24px);
+    padding-left: 12px;
+    padding-right: 12px;
   }
 
   /* Raise floating note button above bottom nav */
@@ -1441,26 +1451,67 @@ input[type="range"] {
     bottom: calc(var(--bottom-nav-h) + 12px);
   }
 
-  /* Raise sticky category filter above bottom nav */
+  /* Category filter: horizontal scroll instead of wrapping */
   #category-filter {
     top: var(--nav-h);
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 6px;
+    padding: 10px 12px;
   }
+  #category-filter::-webkit-scrollbar { display: none; }
+  #category-filter .pill { flex-shrink: 0; }
 
   /* Text sizing */
   .q-text { font-size: 1rem; }
   .stat-num { font-size: 1.35rem; }
+  .stat-label { font-size: 0.65rem; }
   .score-big { font-size: 2.4rem; }
-  .cat-bar-label { width: 90px; font-size: 0.72rem; }
+  .cat-bar-label { width: 80px; font-size: 0.72rem; }
 
   /* Home logo */
   .home-logo { width: 80px; height: 80px; }
+  .home-header h1 { font-size: 1.6rem; }
 
   /* Tighter card padding */
-  .card { padding: 16px; }
+  .card { padding: 14px; }
+
+  /* Question card option font size */
+  .option-btn { font-size: 0.9rem; padding: 11px 12px; }
+
+  /* Action buttons — shrink on very small screens */
+  .action-btn { font-size: 0.8rem; padding: 6px 11px; }
+
+  /* Q-nav: equal-width buttons */
+  .q-nav { gap: 8px; }
+  .q-nav .btn { flex: 1; }
+
+  /* Score actions: stack vertically */
+  .score-actions { flex-direction: column; }
+  .score-actions .btn { width: 100%; }
+
+  /* Toast: raise above bottom nav */
+  .toast { bottom: calc(var(--bottom-nav-h) + 16px); white-space: normal; }
 
   /* Full-width modals on mobile */
   .modal { border-radius: var(--radius) var(--radius) 0 0; }
   .modal-overlay { align-items: flex-end; padding: 0; }
+
+  /* Settings rows: allow wrap on very small screens */
+  .settings-row { gap: 10px; }
+  .settings-select { max-width: 130px; }
+
+  /* Study controls: smaller toggle text */
+  .toggle-label { font-size: 0.8rem; }
+
+  /* Chapter cards: tighter */
+  .chapter-card { padding: 14px; }
+
+  /* Stat row: let numbers breathe */
+  .stat-row { gap: 8px; }
+  .stat-box { padding: 10px 4px; }
 }
 
 /* Handle safe area for notched phones (top nav) */
@@ -1473,5 +1524,22 @@ input[type="range"] {
     .view {
       padding-top: calc(var(--nav-h) + env(safe-area-inset-top) + 16px);
     }
+    /* Sticky category filter must account for taller top bar */
+    #category-filter {
+      top: calc(var(--nav-h) + env(safe-area-inset-top));
+    }
   }
+}
+
+/* Very small phones (iPhone SE, 320px width) */
+@media (max-width: 375px) {
+  .nav-btn { font-size: 0.55rem; min-width: 0; }
+  .nav-btn svg { width: 18px; height: 18px; }
+  .q-text { font-size: 0.95rem; }
+  .option-btn { font-size: 0.85rem; padding: 10px 10px; }
+  .action-btn { font-size: 0.75rem; padding: 5px 9px; }
+  .action-btn svg { width: 14px; height: 14px; }
+  .card { padding: 12px; }
+  .stat-num { font-size: 1.2rem; }
+  .home-header h1 { font-size: 1.4rem; }
 }
