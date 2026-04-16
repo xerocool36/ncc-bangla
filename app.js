@@ -573,23 +573,38 @@ const studyCtrl = {
     // Show result panel
     document.getElementById('study-result').classList.remove('hidden');
 
-    // Title + subtitle
-    let title, subtitle;
+    // Title, subtitle, emoji, motivational
+    let title, subtitle, emoji, motivational;
     if (total === 0) {
-      title    = 'Nessuna risposta';
-      subtitle = 'কোনো প্রশ্নের উত্তর দেওয়া হয়নি।';
-    } else if (pct >= 80) {
-      title    = 'Ottimo! Eccellente! 🏆';
-      subtitle = 'চমৎকার! তুমি খুব ভালো করেছ!';
-    } else if (pct >= 60) {
-      title    = 'Buon lavoro! 👍';
-      subtitle = 'ভালো কাজ! আরও অনুশীলন করো।';
+      emoji        = '📖';
+      title        = 'Nessuna risposta';
+      subtitle     = 'কোনো প্রশ্নের উত্তর দেওয়া হয়নি।';
+      motivational = 'Inizia a rispondere per vedere i tuoi progressi!';
+    } else if (pct >= 90) {
+      emoji        = '🏆';
+      title        = 'Eccellente!';
+      subtitle     = 'অসাধারণ! তুমি প্রায় নিখুঁত!';
+      motivational = 'Risultato straordinario — sei pronto per l\'esame!';
+    } else if (pct >= 70) {
+      emoji        = '🌟';
+      title        = 'Ottimo lavoro!';
+      subtitle     = 'দারুণ কাজ! তুমি ভালো করেছ!';
+      motivational = 'Stai andando alla grande. Continua così!';
+    } else if (pct >= 50) {
+      emoji        = '💪';
+      title        = 'Buon inizio!';
+      subtitle     = 'ভালো শুরু! আরও অনুশীলন করো।';
+      motivational = 'Sei sulla strada giusta. Ripassa le risposte errate!';
     } else {
-      title    = 'Continua a studiare 📚';
-      subtitle = 'চালিয়ে যাও! অনুশীলনই সাফল্যের চাবিকাঠি।';
+      emoji        = '📚';
+      title        = 'Continua a studiare';
+      subtitle     = 'চালিয়ে যাও! অনুশীলনই সাফল্যের চাবিকাঠি।';
+      motivational = 'Non arrenderti — ogni risposta sbagliata è una lezione!';
     }
-    document.getElementById('study-result-title').textContent    = title;
+    document.getElementById('result-emoji').textContent         = emoji;
+    document.getElementById('study-result-title').textContent   = title;
     document.getElementById('study-result-subtitle').textContent = subtitle;
+    document.getElementById('result-motivational').textContent  = motivational;
 
     // Stats row
     document.getElementById('rs-total').textContent   = total;
@@ -743,6 +758,7 @@ const testCtrl = {
 
     document.getElementById('btn-test-next').classList.add('hidden');
     document.getElementById('btn-test-skip').classList.remove('hidden');
+    document.getElementById('btn-test-prev').classList.toggle('hidden', s.currentIndex === 0);
 
     // Translation state reset
     s.currentTranslation = null;
@@ -779,6 +795,39 @@ const testCtrl = {
       btn.addEventListener('click', () => this.handleTestAnswer(i));
       container.appendChild(btn);
     });
+
+    // Restore previously answered state (when navigating back)
+    const prevAnswer = s.answers[s.currentIndex];
+    if (prevAnswer !== null) {
+      const letters = ['A', 'B', 'C'];
+      const optBtns = document.querySelectorAll('#test-q-options .option-btn');
+      optBtns.forEach((btn, i) => {
+        btn.disabled = true;
+        if (i === q.correctIndex) btn.classList.add('correct');
+        else if (i === prevAnswer && prevAnswer !== q.correctIndex) btn.classList.add('wrong');
+      });
+      const correct = prevAnswer === q.correctIndex;
+      const fb = document.getElementById('test-q-feedback');
+      fb.classList.remove('hidden', 'correct-fb', 'wrong-fb');
+      if (correct) {
+        fb.classList.add('correct-fb');
+        document.getElementById('test-feedback-icon').textContent = '✓';
+        document.getElementById('test-feedback-text').textContent = 'Corretto! সঠিক!';
+      } else if (prevAnswer === null) {
+        fb.classList.add('wrong-fb');
+        document.getElementById('test-feedback-icon').textContent = '⏭';
+        document.getElementById('test-feedback-text').textContent = `Saltato. Risposta: ${letters[q.correctIndex]}`;
+      } else {
+        fb.classList.add('wrong-fb');
+        document.getElementById('test-feedback-icon').textContent = '✗';
+        document.getElementById('test-feedback-text').textContent =
+          `Sbagliato. Risposta corretta: ${letters[q.correctIndex]}`;
+      }
+      document.getElementById('btn-test-next').classList.remove('hidden');
+      document.getElementById('btn-test-skip').classList.add('hidden');
+      clearInterval(s.timerInterval);
+      if (s.useTimer) document.getElementById('test-timer').classList.add('hidden');
+    }
 
     // Pre-populate from cache if available, keep hidden
     if (hasTranslation) {
@@ -944,7 +993,48 @@ const testCtrl = {
       s.currentIndex++;
       this.renderTestQuestion();
     } else {
+      this.checkSkippedBeforeScore();
+    }
+  },
+
+  checkSkippedBeforeScore() {
+    const s = this.session;
+    const skippedIndices = s.answers.reduce((acc, ans, i) => {
+      if (ans === null) acc.push(i);
+      return acc;
+    }, []);
+
+    if (skippedIndices.length === 0) {
       this.showScore();
+      return;
+    }
+
+    const count = skippedIndices.length;
+    const msg = count === 1
+      ? 'Hai 1 domanda saltata. Vuoi rispondere prima di concludere?\nএকটি প্রশ্ন এড়িয়ে গেছ। শেষ করার আগে উত্তর দিতে চাও?'
+      : `Hai ${count} domande saltate. Vuoi risponderle prima di concludere?\n${count}টি প্রশ্ন এড়িয়ে গেছ। শেষ করার আগে উত্তর দিতে চাও?`;
+
+    ui.confirmCustom(
+      msg,
+      '← Rispondi',
+      'Termina lo stesso',
+      () => {
+        // Go to first skipped question
+        s.currentIndex = skippedIndices[0];
+        this.renderTestQuestion();
+      },
+      () => {
+        this.showScore();
+      }
+    );
+  },
+
+  prevTestQuestion() {
+    const s = this.session;
+    if (s.currentIndex > 0) {
+      clearInterval(s.timerInterval);
+      s.currentIndex--;
+      this.renderTestQuestion();
     }
   },
 
@@ -956,7 +1046,7 @@ const testCtrl = {
       s.currentIndex++;
       this.renderTestQuestion();
     } else {
-      this.showScore();
+      this.checkSkippedBeforeScore();
     }
   },
 
@@ -1183,6 +1273,8 @@ const ui = {
   },
 
   confirm(msg, onConfirm) {
+    document.getElementById('modal-confirm').textContent = 'Conferma';
+    document.getElementById('modal-cancel').textContent  = 'Annulla';
     document.getElementById('modal-msg').textContent = msg;
     this.showElement('modal-overlay');
     document.getElementById('modal-confirm').onclick = () => {
@@ -1191,6 +1283,21 @@ const ui = {
     };
     document.getElementById('modal-cancel').onclick = () => {
       this.hideElement('modal-overlay');
+    };
+  },
+
+  confirmCustom(msg, confirmLabel, cancelLabel, onConfirm, onCancel) {
+    document.getElementById('modal-msg').textContent        = msg;
+    document.getElementById('modal-confirm').textContent    = confirmLabel;
+    document.getElementById('modal-cancel').textContent     = cancelLabel;
+    this.showElement('modal-overlay');
+    document.getElementById('modal-confirm').onclick = () => {
+      this.hideElement('modal-overlay');
+      onConfirm();
+    };
+    document.getElementById('modal-cancel').onclick = () => {
+      this.hideElement('modal-overlay');
+      if (onCancel) onCancel();
     };
   },
 
@@ -1572,6 +1679,10 @@ function wireEvents() {
 
   document.getElementById('btn-start-test-go').addEventListener('click', () => {
     testCtrl.start();
+  });
+
+  document.getElementById('btn-test-prev').addEventListener('click', () => {
+    testCtrl.prevTestQuestion();
   });
 
   document.getElementById('btn-test-next').addEventListener('click', () => {
