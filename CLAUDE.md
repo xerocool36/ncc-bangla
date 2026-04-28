@@ -32,11 +32,14 @@ Outputs a new `questions.js` with the global `QUESTIONS` array (515 questions ac
 
 | File | Lines | Role |
 |------|-------|------|
-| `app.js` | ~1900 | All application logic |
-| `index.html` | ~571 | HTML shell; all views pre-rendered |
-| `style.css` | ~1785 | All styling and animations |
+| `app.js` | ~2000 | All application logic |
+| `index.html` | ~615 | HTML shell; all views pre-rendered |
+| `style.css` | ~1925 | All styling and animations |
 | `questions.js` | auto-gen | `QUESTIONS` array, do not edit |
 | `extract_questions.py` | — | PDF → questions.js converter |
+| `logo.png` | — | NCC Bangla app logo (nav, home, settings) |
+| `x3ro-logo.png` / `x3ro-logo-sm.png` | — | "Realizzato da" footer logo, served via `<picture>` (sm ≤640px) |
+| `logo2.png` | — | Original 2.4MB X3RO source asset (kept as backup; not referenced) |
 
 ## app.js Module Map
 
@@ -67,10 +70,17 @@ Outputs a new `questions.js` with the global `QUESTIONS` array (515 questions ac
 
 ### Practice Test (`testCtrl`, lines 672–1120)
 - Setup: category, question count (10/20/30/50/all), optional 60s/question timer
+- **Multi-category pool**: `state.testConfig.categories` (string[]) overrides `category` when set; pool = `QUESTIONS.filter(q => categories.includes(q.category))`. Used by the multi-chapter quiz.
 - **Back button** (`#btn-test-prev`): navigate to any previous question; answered questions restore their state (locked options + feedback shown)
 - **Skipped-question modal** (`checkSkippedBeforeScore()`): fires at end of test if any answers are `null`; offers "← Rispondi" (jump to first skipped) or "Termina lo stesso" (show score)
 - **Exit button** (`#btn-exit-test`): confirm modal → straight to score (bypasses skipped check)
-- `showScore()`: animated percentage counter, pass/fail at 70%, wrong answer list
+- `showScore()`: animated percentage counter, pass/fail at 70%, wrong answer list. Each wrong row shows the user's pick (red ✗) or "⊘ Saltata" (muted), then the correct answer (green ✓).
+
+### Capitoli (`#view-chapters`, `refreshChapters()` ~line 1478)
+- Default mode: tap a chapter card → starts a single-chapter quiz with all its questions, no timer.
+- **Quiz multi-capitolo** button toggles `state.chaptersSelectMode`. In selection mode the view gets `.selecting`: cards become tappable toggles, a sticky bottom bar appears with summary, "Tutti"/"Pulisci", a count picker (20/40/Tutte), and a "Inizia quiz" button.
+- Selection persists across visits via `LS.CHAPTER_SEL` (`storage.getChapterSelection`/`saveChapterSelection`); mode is reset off whenever the chapters view is opened.
+- Launching: sets `state.testConfig = { categories, count, timer:false, source:'chapters' }` and calls `testCtrl.start()`.
 
 ### Result Screen (study mode only, `#study-result`)
 - Emoji: 🏆 ≥90%, 🌟 ≥70%, 💪 ≥50%, 📚 <50%
@@ -84,14 +94,19 @@ Outputs a new `questions.js` with the global `QUESTIONS` array (515 questions ac
 - Draggable floating note button (`makeDraggableNoteBtn()`)
 - Position persisted in `localStorage` key `noteBtn_pos`
 
+### App Footer (`.app-footer`, end of `index.html`)
+- "Realizzato da [X3RO Automations]" — globally visible, links to `https://x3roautomations.it` (target="_blank").
+- `<picture>` swaps `x3ro-logo-sm.png` (220px wide, ~24KB) on ≤640px viewports for `x3ro-logo.png` (400px wide, ~68KB) elsewhere.
+- Mobile layout: `padding-bottom: calc(var(--bottom-nav-h) + 14px)` keeps it clear of the fixed bottom nav.
+
 ## Key Design Patterns
 
 - **No framework, no bundler** — pure ES5-compatible vanilla JS, `<script>` tags only.
 - **Global state** — single `state` object; all modules read/write it.
 - **Views** — pre-rendered `<section>` elements toggled by `ui.showView(name)`. Never destroyed/recreated.
-- **localStorage only** — persistence keys defined as constants in `LS` object (lines 21–27).
+- **localStorage only** — persistence keys defined as constants in `LS` object (lines 21–28).
 - **Translation is lazy** — Italian shown immediately; Bengali fetched async and cached.
-- **Cache-busting** — script tags use `?v=N` query strings (currently `?v=8`); increment when deploying breaking JS/HTML changes.
+- **Cache-busting** — script tags use `?v=N` query strings (currently `?v=12`); increment when deploying breaking JS/HTML changes.
 
 ## Modal System
 
