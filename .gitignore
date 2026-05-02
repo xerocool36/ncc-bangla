@@ -1,7 +1,0 @@
-.DS_Store
-.tmp/
-*.swp
-.env
-.env.*
-!.env.example
-supabase/.temp/
