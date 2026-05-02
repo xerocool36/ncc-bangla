@@ -7,8 +7,8 @@
 'use strict';
 
 /* Replace these two placeholders when deploying — see Backend task. */
-var EDGE_FUNCTION_URL = '__EDGE_FUNCTION_URL__';   /* ← wire after Edge Function deploy */
-var TURNSTILE_SITE_KEY = '__TURNSTILE_SITE_KEY__'; /* ← wire after Cloudflare Turnstile setup */
+var EDGE_FUNCTION_URL = 'https://drypjcgloclnxayfzdsz.supabase.co/functions/v1/ncc-registrations';   /* ← wire after Edge Function deploy */
+var TURNSTILE_SITE_KEY = '0x4AAAAAADHqMXrFU8a0AXfT'; /* ← wire after Cloudflare Turnstile setup */
 
 var splash = (function () {
 
