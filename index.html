@@ -4,12 +4,68 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NCC Bangla — এনসিসি পরীক্ষা প্রস্তুতি</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=2">
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Nunito:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
+
+  <!-- ═══════════ SPLASH OVERLAY ═══════════ -->
+  <div id="splash-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="splash-heading">
+    <div class="splash-card">
+      <div class="splash-brand">
+        <img src="logo.png" alt="NCC Bangla" class="splash-logo">
+        <h1 id="splash-heading">NCC Bangla</h1>
+      </div>
+
+      <div role="tablist" aria-label="Accedi o registrati" class="splash-tabs">
+        <button id="splash-tab-login" class="splash-tab active" role="tab" aria-selected="true" aria-controls="splash-form-login">Accedi</button>
+        <button id="splash-tab-register" class="splash-tab" role="tab" aria-selected="false" aria-controls="splash-form-register">Registrati</button>
+      </div>
+
+      <!-- Single shared Turnstile widget — rendered once, used by whichever form is active -->
+      <div class="cf-turnstile" data-sitekey="0x4AAAAAADHqMXrFU8a0AXfT"></div>
+
+      <form id="splash-form-login" novalidate role="tabpanel" aria-labelledby="splash-tab-login">
+        <div class="splash-field">
+          <label for="splash-login-email">Email</label>
+          <input type="email" id="splash-login-email" name="email" placeholder="la-tua@email.com" required autocomplete="email">
+        </div>
+        <input type="text" name="company_url" tabindex="-1" autocomplete="off">
+        <button id="splash-btn-login" type="submit" class="btn btn-primary splash-submit-btn">Accedi</button>
+      </form>
+
+      <form id="splash-form-register" hidden novalidate role="tabpanel" aria-labelledby="splash-tab-register">
+        <div class="splash-field">
+          <label for="splash-reg-name">Nome e cognome</label>
+          <input type="text" id="splash-reg-name" name="name" placeholder="Mario Rossi" required autocomplete="name">
+        </div>
+        <div class="splash-field">
+          <label for="splash-reg-email">Email</label>
+          <input type="email" id="splash-reg-email" name="email" placeholder="la-tua@email.com" required autocomplete="email">
+        </div>
+        <div class="splash-field">
+          <label for="splash-reg-phone">Telefono</label>
+          <input type="tel" id="splash-reg-phone" name="phone" placeholder="+39 333 1234567" required autocomplete="tel">
+        </div>
+        <div class="splash-consent">
+          <label class="splash-consent-label">
+            <input type="checkbox" id="splash-reg-consent" name="marketing_consent" required>
+            <span>Accetto la <a href="./privacy.html" target="_blank" class="splash-privacy-link">Privacy Policy</a> e acconsento al trattamento dei dati per ricevere comunicazioni.</span>
+          </label>
+        </div>
+        <input type="text" name="company_url" tabindex="-1" autocomplete="off">
+        <button id="splash-btn-register" type="submit" class="btn btn-primary splash-submit-btn">Registrati</button>
+      </form>
+
+      <div id="splash-error" hidden></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ APP SHELL ═══════════ -->
+  <div id="app-shell" hidden>
 
   <!-- ═══════════ NAV ═══════════ -->
   <nav id="app-nav">
@@ -607,9 +663,13 @@
         <img src="x3ro-logo.png" alt="X3RO Automations" class="app-footer-logo" loading="lazy" decoding="async" width="400" height="218">
       </picture>
     </a>
+    <a class="app-footer-privacy" href="./privacy.html">Privacy</a>
   </footer>
 
+  </div><!-- /#app-shell -->
+
   <script src="questions.js?v=12"></script>
-  <script src="app.js?v=12"></script>
+  <script src="splash.js?v=1"></script>
+  <script src="app.js?v=13"></script>
 </body>
 </html>

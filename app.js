@@ -25,6 +25,8 @@ const LS = {
   SETTINGS:    'ncc_settings',
   NOTES:       'ncc_notes',
   CHAPTER_SEL: 'ncc_chapter_selection',
+  REGISTERED:  'ncc_registered',
+  EMAIL:       'ncc_email',
 };
 
 // ─────────────────────────────────────────
@@ -1923,6 +1925,19 @@ function wireEvents() {
 // ─────────────────────────────────────────
 // 13. App init
 // ─────────────────────────────────────────
+function bootApp() {
+  ttsModule.init();
+  state.chapterSelection = storage.getChapterSelection();
+  wireEvents();
+  studyCtrl.init();
+  makeDraggableNoteBtn();
+  ui.showView('home');
+}
+
+function _safeGet(key) {
+  try { return localStorage.getItem(key); } catch (e) { return null; }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   if (typeof QUESTIONS === 'undefined' || !QUESTIONS.length) {
     document.body.innerHTML = `
@@ -1939,12 +1954,15 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  ttsModule.init();
-  state.chapterSelection = storage.getChapterSelection();
-  wireEvents();
-  studyCtrl.init();
-  makeDraggableNoteBtn();
-  ui.showView('home');
+  const registered = _safeGet(LS.REGISTERED) === 'true';
+  if (!registered) {
+    document.getElementById('splash-overlay').hidden = false;
+    document.getElementById('app-shell').hidden = true;
+    splash.init();
+    return;
+  }
+  document.getElementById('app-shell').hidden = false;
+  bootApp();
 });
 
 function makeDraggableNoteBtn() {
