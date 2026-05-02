@@ -35,13 +35,19 @@ function json(body: unknown, status = 200, origin: string | null = null): Respon
 }
 
 async function verifyTurnstile(token: string): Promise<boolean> {
+  if (!token) return false;
   const body = new URLSearchParams({ secret: TURNSTILE_SECRET, response: token });
-  const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-    method: "POST",
-    body,
-  });
-  const data = await res.json();
-  return data.success === true;
+  try {
+    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      body,
+      signal: AbortSignal.timeout(3000),
+    });
+    const data = await res.json();
+    return data.success === true;
+  } catch {
+    return false;
+  }
 }
 
 async function brevoCall(
@@ -50,8 +56,7 @@ async function brevoCall(
   phone: string,
 ): Promise<void> {
   try {
-    // Add / update contact
-    await fetch("https://api.brevo.com/v3/contacts", {
+    const contactRes = await fetch("https://api.brevo.com/v3/contacts", {
       method: "POST",
       headers: {
         "api-key": BREVO_API_KEY,
@@ -63,10 +68,13 @@ async function brevoCall(
         listIds: [Number(NCC_BANGLA_LIST_ID)],
         updateEnabled: true,
       }),
+      signal: AbortSignal.timeout(5000),
     });
+    if (!contactRes.ok) {
+      console.error("brevo contact failed", contactRes.status, await contactRes.text());
+    }
 
-    // Send welcome email
-    await fetch("https://api.brevo.com/v3/smtp/email", {
+    const emailRes = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: {
         "api-key": BREVO_API_KEY,
@@ -76,9 +84,12 @@ async function brevoCall(
         to: [{ email, name }],
         templateId: Number(NCC_BANGLA_WELCOME_TEMPLATE_ID),
       }),
+      signal: AbortSignal.timeout(5000),
     });
+    if (!emailRes.ok) {
+      console.error("brevo email failed", emailRes.status, await emailRes.text());
+    }
   } catch (err) {
-    // Brevo failure must not block the user — already in the app
     console.error("brevo failure", err);
   }
 }
