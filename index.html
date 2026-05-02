@@ -13,29 +13,31 @@
 <body>
 
   <!-- ═══════════ SPLASH OVERLAY ═══════════ -->
-  <div id="splash-overlay" hidden>
+  <div id="splash-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="splash-heading">
     <div class="splash-card">
       <div class="splash-brand">
         <img src="logo.png" alt="NCC Bangla" class="splash-logo">
-        <h1>NCC Bangla</h1>
+        <h1 id="splash-heading">NCC Bangla</h1>
       </div>
 
-      <div class="splash-tabs">
-        <button id="splash-tab-login" class="splash-tab active">Accedi</button>
-        <button id="splash-tab-register" class="splash-tab">Registrati</button>
+      <div role="tablist" aria-label="Accedi o registrati" class="splash-tabs">
+        <button id="splash-tab-login" class="splash-tab active" role="tab" aria-selected="true" aria-controls="splash-form-login">Accedi</button>
+        <button id="splash-tab-register" class="splash-tab" role="tab" aria-selected="false" aria-controls="splash-form-register">Registrati</button>
       </div>
 
-      <form id="splash-form-login" novalidate>
+      <!-- Single shared Turnstile widget — rendered once, used by whichever form is active -->
+      <div class="cf-turnstile" data-sitekey="__TURNSTILE_SITE_KEY__"></div>
+
+      <form id="splash-form-login" novalidate role="tabpanel" aria-labelledby="splash-tab-login">
         <div class="splash-field">
           <label for="splash-login-email">Email</label>
           <input type="email" id="splash-login-email" name="email" placeholder="la-tua@email.com" required autocomplete="email">
         </div>
-        <input type="text" name="company_url" tabindex="-1" autocomplete="off" aria-hidden="true">
-        <div class="cf-turnstile" data-sitekey="__TURNSTILE_SITE_KEY__"></div>
+        <input type="text" name="company_url" tabindex="-1" autocomplete="off">
         <button id="splash-btn-login" type="submit" class="btn btn-primary splash-submit-btn">Accedi</button>
       </form>
 
-      <form id="splash-form-register" hidden novalidate>
+      <form id="splash-form-register" hidden novalidate role="tabpanel" aria-labelledby="splash-tab-register">
         <div class="splash-field">
           <label for="splash-reg-name">Nome e cognome</label>
           <input type="text" id="splash-reg-name" name="name" placeholder="Mario Rossi" required autocomplete="name">
@@ -50,12 +52,11 @@
         </div>
         <div class="splash-consent">
           <label class="splash-consent-label">
-            <input type="checkbox" id="splash-reg-consent" name="marketing_consent">
+            <input type="checkbox" id="splash-reg-consent" name="marketing_consent" required>
             <span>Accetto la <a href="./privacy.html" target="_blank" class="splash-privacy-link">Privacy Policy</a> e acconsento al trattamento dei dati per ricevere comunicazioni.</span>
           </label>
         </div>
-        <input type="text" name="company_url" tabindex="-1" autocomplete="off" aria-hidden="true">
-        <div class="cf-turnstile" data-sitekey="__TURNSTILE_SITE_KEY__"></div>
+        <input type="text" name="company_url" tabindex="-1" autocomplete="off">
         <button id="splash-btn-register" type="submit" class="btn btn-primary splash-submit-btn">Registrati</button>
       </form>
 

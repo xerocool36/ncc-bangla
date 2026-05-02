@@ -1934,6 +1934,10 @@ function bootApp() {
   ui.showView('home');
 }
 
+function _safeGet(key) {
+  try { return localStorage.getItem(key); } catch (e) { return null; }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   if (typeof QUESTIONS === 'undefined' || !QUESTIONS.length) {
     document.body.innerHTML = `
@@ -1950,7 +1954,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  const registered = localStorage.getItem(LS.REGISTERED) === 'true';
+  const registered = _safeGet(LS.REGISTERED) === 'true';
   if (!registered) {
     document.getElementById('splash-overlay').hidden = false;
     document.getElementById('app-shell').hidden = true;
