@@ -1,4 +1,4 @@
-# CLAUDE.md — ncc-prep
+# CLAUDE.md — ncc-bangla
 
 This file provides guidance to Claude Code when working in this directory.
 
@@ -130,6 +130,6 @@ Single shared modal (`#modal-overlay`). Two entry points:
 ## Git / Deployment
 
 - Active dev branch: `dev`
-- GitHub: `xerocool36/ncc-prep`
-- GitHub Pages (main branch): `https://xerocool36.github.io/ncc-prep/`
+- GitHub: `xerocool36/ncc-bangla`
+- GitHub Pages (main branch): `https://xerocool36.github.io/ncc-bangla/`
 - Pages is built from `main`; merge `dev → main` to deploy publicly

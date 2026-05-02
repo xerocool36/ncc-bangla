@@ -225,7 +225,7 @@ def main():
             print(f"    {i+1}. {opt[:60]}{marker}")
 
     write_js(questions)
-    print("\nDone! Review questions.js, then place it in the ncc-prep/ directory.")
+    print("\nDone! Review questions.js, then place it in the ncc-bangla/ directory.")
 
 
 if __name__ == "__main__":
