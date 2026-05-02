@@ -6,9 +6,7 @@
 
 'use strict';
 
-/* Replace these two placeholders when deploying — see Backend task. */
-var EDGE_FUNCTION_URL = 'https://drypjcgloclnxayfzdsz.supabase.co/functions/v1/ncc-registrations';   /* ← wire after Edge Function deploy */
-var TURNSTILE_SITE_KEY = '0x4AAAAAADHqMXrFU8a0AXfT'; /* ← wire after Cloudflare Turnstile setup */
+var EDGE_FUNCTION_URL = 'https://drypjcgloclnxayfzdsz.supabase.co/functions/v1/ncc-registrations';
 
 var splash = (function () {
 
@@ -22,7 +20,6 @@ var splash = (function () {
     errorEl.textContent = msg;
     errorEl.hidden = false;
     _setSubmitIdle();
-    _resetTurnstile();
   }
 
   function clearError() {
@@ -92,18 +89,6 @@ var splash = (function () {
     _setSubmitIdle();
   }
 
-  function _getTurnstileToken() {
-    /* Returns the Turnstile response token, or empty string if widget not loaded. */
-    var resp = document.querySelector('.cf-turnstile [name="cf-turnstile-response"]');
-    return resp ? resp.value : '';
-  }
-
-  function _resetTurnstile() {
-    if (window.turnstile && typeof window.turnstile.reset === 'function') {
-      window.turnstile.reset();
-    }
-  }
-
   function _isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
@@ -121,15 +106,10 @@ var splash = (function () {
 
     var email = (el('splash-login-email').value || '').trim().toLowerCase();
     var hp    = (document.querySelector('#splash-form-login [name="company_url"]').value || '');
-    var token = _getTurnstileToken();
     var btn   = el('splash-btn-login');
 
     if (!_isValidEmail(email)) {
       setError('Email non valida.');
-      return;
-    }
-    if (!token) {
-      setError('Verifica anti-bot in caricamento, attendi un secondo e riprova.');
       return;
     }
 
@@ -138,7 +118,7 @@ var splash = (function () {
     fetch(EDGE_FUNCTION_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'lookup', email: email, turnstile_token: token, hp: hp }),
+      body: JSON.stringify({ action: 'lookup', email: email, hp: hp }),
     })
       .then(function (res) { return res.json(); })
       .then(function (data) {
@@ -170,7 +150,6 @@ var splash = (function () {
     var phone   = (el('splash-reg-phone').value || '').trim();
     var consent = el('splash-reg-consent').checked;
     var hp      = (document.querySelector('#splash-form-register [name="company_url"]').value || '');
-    var token   = _getTurnstileToken();
     var btn     = el('splash-btn-register');
 
     if (!name) {
@@ -189,10 +168,6 @@ var splash = (function () {
       setError('Devi accettare la privacy policy per continuare.');
       return;
     }
-    if (!token) {
-      setError('Verifica anti-bot in caricamento, attendi un secondo e riprova.');
-      return;
-    }
 
     _setSubmitLoading(btn);
 
@@ -205,7 +180,6 @@ var splash = (function () {
         name: name,
         phone: phone,
         marketing_consent: consent,
-        turnstile_token: token,
         hp: hp,
       }),
     })
@@ -243,15 +217,6 @@ var splash = (function () {
 
     el('splash-form-login').addEventListener('submit', _handleLoginSubmit);
     el('splash-form-register').addEventListener('submit', _handleRegisterSubmit);
-
-    /* Render Turnstile widget if the API has loaded; else it self-renders via data-sitekey. */
-    if (window.turnstile && typeof window.turnstile.render === 'function') {
-      var container = document.querySelector('.cf-turnstile');
-      if (container && !container.dataset.rendered) {
-        window.turnstile.render(container, { sitekey: TURNSTILE_SITE_KEY });
-        container.dataset.rendered = '1';
-      }
-    }
   }
 
   return { init: init };

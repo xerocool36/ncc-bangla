@@ -9,7 +9,6 @@ const ALLOWED_ORIGINS = [
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const TURNSTILE_SECRET = Deno.env.get("TURNSTILE_SECRET")!;
 const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY")!;
 const NCC_BANGLA_LIST_ID = Deno.env.get("NCC_BANGLA_LIST_ID")!;
 const NCC_BANGLA_WELCOME_TEMPLATE_ID = Deno.env.get(
@@ -34,20 +33,11 @@ function json(body: unknown, status = 200, origin: string | null = null): Respon
   });
 }
 
-async function verifyTurnstile(token: string): Promise<boolean> {
-  if (!token) return false;
-  const body = new URLSearchParams({ secret: TURNSTILE_SECRET, response: token });
-  try {
-    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-      method: "POST",
-      body,
-      signal: AbortSignal.timeout(3000),
-    });
-    const data = await res.json();
-    return data.success === true;
-  } catch {
-    return false;
-  }
+async function _verifyTurnstileRemoved(): Promise<boolean> {
+  /* Turnstile removed for v1 — honeypot is the only bot defense.
+     If spam becomes a problem, re-enable by restoring siteverify here
+     and adding back the token check in the handler below. */
+  return true;
 }
 
 async function brevoCall(
@@ -112,27 +102,15 @@ serve(async (req: Request) => {
     return json({ error: "richiesta non valida" }, 400, origin);
   }
 
-  const { action, email: rawEmail, turnstile_token, hp } = body as {
+  const { action, email: rawEmail, hp } = body as {
     action?: string;
     email?: string;
-    turnstile_token?: string;
     hp?: string;
   };
 
   // Honeypot: return 200 silently so bots don't know they were caught
   if (hp) {
     return json({ ok: true }, 200, origin);
-  }
-
-  // Turnstile verification
-  const tokenStr = String(turnstile_token ?? "");
-  const turnstileOk = await verifyTurnstile(tokenStr);
-  if (!turnstileOk) {
-    return json(
-      { error: "verifica anti-bot fallita, ricarica e riprova" },
-      400,
-      origin,
-    );
   }
 
   const email = String(rawEmail ?? "").trim().toLowerCase();
