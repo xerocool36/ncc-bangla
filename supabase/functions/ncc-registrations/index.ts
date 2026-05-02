@@ -200,10 +200,13 @@ serve(async (req: Request) => {
         throw insertErr;
       }
 
-      // Fresh insert: respond immediately, fire Brevo in the background
+      // Fresh insert: respond immediately, fire Brevo in the background.
+      // Strip whitespace from phone — Brevo's SMS attribute requires a compact
+      // format (ideally E.164). DB keeps the user's original input.
+      const phoneForBrevo = phone.replace(/\s+/g, "");
       const response = json({ exists: false, registered: true }, 200, origin);
       // deno-lint-ignore no-explicit-any
-      (globalThis as any).EdgeRuntime?.waitUntil(brevoCall(email, name, phone));
+      (globalThis as any).EdgeRuntime?.waitUntil(brevoCall(email, name, phoneForBrevo));
       return response;
     }
 
