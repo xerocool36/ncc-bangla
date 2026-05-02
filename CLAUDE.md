@@ -133,3 +133,57 @@ Single shared modal (`#modal-overlay`). Two entry points:
 - GitHub: `xerocool36/ncc-prep`
 - GitHub Pages (main branch): `https://xerocool36.github.io/ncc-prep/`
 - Pages is built from `main`; merge `dev → main` to deploy publicly
+
+## Mandatory Registration Splash (added 2026-05-02)
+
+Every visitor must register (or "log in" by email) before the app shell renders. Lead-generation play. Captures **name, email, phone, marketing consent**. Per-device localStorage flag (`ncc_registered=true`) skips the splash on return visits.
+
+### Files
+
+| File | Role |
+|------|------|
+| `index.html` | `#splash-overlay` markup wrapping the app shell; loaded BEFORE `app.js` |
+| `splash.js` | Module pattern, `splash.init()` called from `app.js` DOMContentLoaded when not registered |
+| `privacy.html` | GDPR Italian privacy policy linked from the splash + footer |
+| `email-templates/welcome.html` | Brevo HTML template (paste manually into Brevo dashboard) — bilingual IT+BN, vibrant editorial design |
+| `supabase/migrations/001_ncc_bangla_registrations.sql` | Table definition (already applied to prod) |
+| `supabase/functions/ncc-registrations/index.ts` | Deno Edge Function — only public POST endpoint |
+
+### Architecture
+
+```
+Browser splash → POST https://drypjcgloclnxayfzdsz.supabase.co/functions/v1/ncc-registrations
+                  ├── action: "lookup"   → SELECT email, returns {exists: bool}
+                  └── action: "register" → INSERT, returns {exists:false, registered:true}
+                                            then EdgeRuntime.waitUntil(brevoCall) in background
+                                            (adds contact to Brevo list + sends welcome email template)
+```
+
+### Supabase
+
+- **Shared with `review-management`** (project `drypjcgloclnxayfzdsz`). Will move to a dedicated project when NCC has its first paying client (per `agency-ops/ncc-bangla-supabase` memory).
+- Table: `ncc_bangla_registrations` (prefixed for namespace isolation). RLS enabled.
+- Edge Function deployed via `supabase functions deploy ncc-registrations --project-ref drypjcgloclnxayfzdsz`.
+- Function secrets set via `supabase secrets set BREVO_API_KEY=... NCC_BANGLA_LIST_ID=3 NCC_BANGLA_WELCOME_TEMPLATE_ID=1`.
+
+### Brevo
+
+- Contact list ID: **3** ("NCC Bangla — Iscritti")
+- Welcome template ID: **1** ("NCC Bangla — Benvenuto") — paste contents of `email-templates/welcome.html` into Brevo's HTML editor
+- API key in `.env` (`BREVO_API_KEY`, scoped to Transactional + Contacts only)
+
+### Bot defense
+
+- **Honeypot field only** (input named `company_url` hidden via CSS). Sufficient for a free study tool.
+- **Turnstile was removed** (was causing UX issues for users on certain networks). The Cloudflare Turnstile site key is still registered (in `.env`) but unused. To re-enable: add back `<div class="cf-turnstile">` in index.html, restore `_getTurnstileToken` calls in splash.js, restore `verifyTurnstile()` call in Edge Function — full deletion was commit `13236c3`, can be reverted.
+
+### Local dev
+
+- `python3 -m http.server 8000` — splash form-submit needs the LIVE Edge Function (no localhost mock); just don't use anti-bot/honeypot to test the UI flow.
+- Cache-bust strategy: bump query string version when shipping JS changes (`splash.js?v=N`, `app.js?v=N`). GitHub Pages serves with `cache-control: max-age=600` so users with old HTML cached take up to 10 min to revalidate.
+
+### Known issues (open as of 2026-05-02 16:30)
+
+- **One user reported splash stuck on "Inviando" + tabs unclickable** despite multiple cache-bust deploys, removing Turnstile entirely, and verified end-to-end success in Playwright on both desktop and mobile (375px) viewports. DB has 9 successful registrations including the user's own, so the server is working — likely browser-specific cache or extension issue. Diagnostic next step: have user open DevTools → Network → "Disable cache" → reload + screenshot console errors. See commits `1917112`, `c4478bd`, `13236c3` for the UX-fix attempts.
+- **Test rows in `ncc_bangla_registrations`** to clean up once everything is verified: id 3 (claude-debug-...), id 5 (claude-fresh-...), id 7 (invisible-test-...), id 8 (no-turnstile-...), id 9 (hhshshehehsjeiei@... — junk test).
+- **Brevo welcome email template** — was set up at template ID 1 with placeholder content; user needs to paste the actual contents of `email-templates/welcome.html` into Brevo's HTML editor for the proper bilingual design to go out.
