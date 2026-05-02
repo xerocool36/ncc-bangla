@@ -17,22 +17,18 @@ var splash = (function () {
   function el(id) { return document.getElementById(id); }
 
   function setError(msg) {
+    /* Show inline error and immediately re-enable the form so user can retry. */
+    var errorEl = el('splash-error');
+    errorEl.textContent = msg;
+    errorEl.hidden = false;
+    _setSubmitIdle();
+    _resetTurnstile();
+  }
+
+  function clearError() {
     var errorEl = el('splash-error');
     errorEl.textContent = '';
-    errorEl.hidden = false;
-
-    var msgNode = document.createElement('span');
-    msgNode.textContent = msg;
-    errorEl.appendChild(msgNode);
-
-    var retryBtn = document.createElement('button');
-    retryBtn.className = 'btn btn-ghost btn-sm splash-retry-btn';
-    retryBtn.textContent = 'Riprova';
-    retryBtn.addEventListener('click', function () {
-      errorEl.hidden = true;
-      _setSubmitIdle();
-    });
-    errorEl.appendChild(retryBtn);
+    errorEl.hidden = true;
   }
 
   function _setSubmitLoading(btn) {
@@ -50,15 +46,18 @@ var splash = (function () {
   }
 
   function _dismissSplash(email) {
+    /* Boot the app FIRST so any failure leaves the splash visible
+       (with the form re-enabled by the caller) instead of stranding
+       the user on a broken app shell. */
+    el('app-shell').hidden = false;
+    bootApp();
     try {
       localStorage.setItem('ncc_registered', 'true');
       localStorage.setItem('ncc_email', email);
     } catch (e) {
-      /* localStorage unavailable — proceed anyway, user will see splash again next visit */
+      /* localStorage unavailable — user will see splash next visit, accept */
     }
     el('splash-overlay').hidden = true;
-    el('app-shell').hidden = false;
-    bootApp();
   }
 
   function _switchToRegister(email) {
@@ -73,7 +72,6 @@ var splash = (function () {
     var regTab   = el('splash-tab-register');
     var loginForm = el('splash-form-login');
     var regForm   = el('splash-form-register');
-    var errorEl   = el('splash-error');
 
     if (tab === 'login') {
       loginTab.classList.add('active');
@@ -90,7 +88,8 @@ var splash = (function () {
       regForm.hidden   = false;
       loginForm.hidden = true;
     }
-    if (errorEl) errorEl.hidden = true;
+    clearError();
+    _setSubmitIdle();
   }
 
   function _getTurnstileToken() {
@@ -118,8 +117,7 @@ var splash = (function () {
 
   function _handleLoginSubmit(e) {
     e.preventDefault();
-    var errorEl = el('splash-error');
-    errorEl.hidden = true;
+    clearError();
 
     var email = (el('splash-login-email').value || '').trim().toLowerCase();
     var hp    = (document.querySelector('#splash-form-login [name="company_url"]').value || '');
@@ -128,6 +126,10 @@ var splash = (function () {
 
     if (!_isValidEmail(email)) {
       setError('Email non valida.');
+      return;
+    }
+    if (!token) {
+      setError('Verifica anti-bot in caricamento, attendi un secondo e riprova.');
       return;
     }
 
@@ -142,21 +144,18 @@ var splash = (function () {
       .then(function (data) {
         if (data.error) {
           setError(data.error);
-          _resetTurnstile();
           return;
         }
         if (data.exists === true) {
           _dismissSplash(email);
         } else {
           /* Unknown email — switch to registration with email pre-filled. */
-          _setSubmitIdle();
           _switchToRegister(email);
           setError('Email non trovata. Compila il modulo di registrazione.');
         }
       })
       .catch(function () {
         setError('Errore di rete. Controlla la connessione e riprova.');
-        _resetTurnstile();
       });
   }
 
@@ -164,8 +163,7 @@ var splash = (function () {
 
   function _handleRegisterSubmit(e) {
     e.preventDefault();
-    var errorEl = el('splash-error');
-    errorEl.hidden = true;
+    clearError();
 
     var name    = (el('splash-reg-name').value  || '').trim();
     var email   = (el('splash-reg-email').value || '').trim().toLowerCase();
@@ -191,6 +189,10 @@ var splash = (function () {
       setError('Devi accettare la privacy policy per continuare.');
       return;
     }
+    if (!token) {
+      setError('Verifica anti-bot in caricamento, attendi un secondo e riprova.');
+      return;
+    }
 
     _setSubmitLoading(btn);
 
@@ -211,14 +213,18 @@ var splash = (function () {
       .then(function (data) {
         if (data.error) {
           setError(data.error);
-          _resetTurnstile();
           return;
         }
-        _dismissSplash(email);
+        /* Success: dismiss splash inside a try so any bootApp() exception
+           still leaves the user with a re-enabled form to retry. */
+        try {
+          _dismissSplash(email);
+        } catch (err) {
+          setError('Errore inatteso. Ricarica la pagina e riprova.');
+        }
       })
       .catch(function () {
         setError('Errore di rete. Controlla la connessione e riprova.');
-        _resetTurnstile();
       });
   }
 

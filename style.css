@@ -2081,23 +2081,18 @@ input[type="range"] {
   cursor: not-allowed;
 }
 
-/* Error display */
+/* Error display — inline message; submit button is auto-re-enabled by setError(). */
 #splash-error {
   margin-top: 16px;
   padding: 12px 14px;
   background: var(--red-lt);
-  border: 1px solid rgba(206,43,55,0.2);
+  border: 1px solid rgba(206,43,55,0.25);
+  border-left: 4px solid var(--red);
   border-radius: var(--radius-sm);
   color: var(--red);
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.splash-retry-btn {
-  flex-shrink: 0;
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.45;
 }
 
 /* GDPR consent */
