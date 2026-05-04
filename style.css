@@ -1966,6 +1966,10 @@ input[type="range"] {
   padding: 20px;
 }
 
+#splash-overlay[hidden] {
+  display: none;
+}
+
 .splash-card {
   background: var(--card);
   border-radius: var(--radius);
