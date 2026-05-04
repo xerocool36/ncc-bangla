@@ -1,0 +1,377 @@
+{
+  "name": "NCC Bangla — Registrations",
+  "nodes": [
+    {
+      "id": "node-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [240, 400],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ncc-register",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "https://xerocool36.github.io,http://localhost:8000,http://127.0.0.1:8000"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "node-parse",
+      "name": "Parse + honeypot",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 400],
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst hp = String(body.hp || '').trim();\nif (hp.length > 0) {\n  return [{ json: { action: 'honeypot' } }];\n}\nconst email = String(body.email || '').trim().toLowerCase();\nreturn [{\n  json: {\n    action: String(body.action || ''),\n    email: email,\n    name: String(body.name || '').trim(),\n    phone: String(body.phone || '').trim(),\n    marketing_consent: body.marketing_consent === true,\n  }\n}];"
+      }
+    },
+    {
+      "id": "node-switch",
+      "name": "Route action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [680, 400],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 },
+                "conditions": [
+                  { "id": "cond-honeypot", "leftValue": "={{ $json.action }}", "rightValue": "honeypot", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "honeypot"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 },
+                "conditions": [
+                  { "id": "cond-lookup", "leftValue": "={{ $json.action }}", "rightValue": "lookup", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "lookup"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 },
+                "conditions": [
+                  { "id": "cond-register", "leftValue": "={{ $json.action }}", "rightValue": "register", "operator": { "type": "string", "operation": "equals" } }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "register"
+            }
+          ]
+        },
+        "options": { "fallbackOutput": "extra", "renameFallbackOutput": "fallback" }
+      }
+    },
+    {
+      "id": "node-resp-honeypot",
+      "name": "Respond: honeypot OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [920, 100],
+      "parameters": { "respondWith": "json", "responseBody": "={{ { ok: true } }}" }
+    },
+    {
+      "id": "node-lookup-find",
+      "name": "Lookup: Find by email",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [920, 280],
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "get",
+        "tableId": "ncc_bangla_registrations",
+        "filters": {
+          "conditions": [
+            { "keyName": "email", "condition": "eq", "keyValue": "={{ $json.email }}" }
+          ]
+        }
+      },
+      "credentials": { "supabaseApi": { "id": "FjXknluDwpYHQYoI", "name": "supabase dhaka" } }
+    },
+    {
+      "id": "node-if-lookup-found",
+      "name": "IF: Lookup found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1140, 280],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose", "version": 2 },
+          "conditions": [
+            { "id": "cond-lookup-found", "leftValue": "={{ $json.id }}", "rightValue": "", "operator": { "type": "string", "operation": "notEmpty", "singleValue": true } }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "node-lookup-bump",
+      "name": "Lookup: bump last_seen",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1360, 220],
+      "parameters": {
+        "operation": "update",
+        "tableId": "ncc_bangla_registrations",
+        "filters": {
+          "conditions": [
+            { "keyName": "id", "condition": "eq", "keyValue": "={{ $json.id }}" }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            { "fieldId": "last_seen_at", "fieldValue": "={{ $now.toISO() }}" }
+          ]
+        }
+      },
+      "credentials": { "supabaseApi": { "id": "FjXknluDwpYHQYoI", "name": "supabase dhaka" } }
+    },
+    {
+      "id": "node-resp-exists",
+      "name": "Respond: exists",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [1580, 220],
+      "parameters": { "respondWith": "json", "responseBody": "={{ { exists: true } }}" }
+    },
+    {
+      "id": "node-resp-not-found",
+      "name": "Respond: not found",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [1360, 360],
+      "parameters": { "respondWith": "json", "responseBody": "={{ { exists: false } }}" }
+    },
+    {
+      "id": "node-validate",
+      "name": "Validate registration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 520],
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst errors = [];\nif (!item.name) errors.push('il nome è obbligatorio');\nif (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(item.email)) errors.push('email non valida');\nif (item.phone.replace(/\\D/g, '').length < 8) errors.push('numero di telefono non valido (minimo 8 cifre)');\nif (item.marketing_consent !== true) errors.push('devi accettare la privacy policy per continuare');\nif (errors.length > 0) {\n  return [{ json: { _validationError: errors[0], ...item } }];\n}\nreturn [{ json: { _validationError: null, ...item } }];"
+      }
+    },
+    {
+      "id": "node-if-valid",
+      "name": "IF: Validation OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1140, 520],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose", "version": 2 },
+          "conditions": [
+            { "id": "cond-valid", "leftValue": "={{ $json._validationError }}", "rightValue": "", "operator": { "type": "string", "operation": "empty", "singleValue": true } }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "node-resp-validation-error",
+      "name": "Respond: validation error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [1360, 620],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { error: $json._validationError } }}",
+        "options": { "responseCode": 400 }
+      }
+    },
+    {
+      "id": "node-register-find",
+      "name": "Register: Find by email",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1360, 480],
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "get",
+        "tableId": "ncc_bangla_registrations",
+        "filters": {
+          "conditions": [
+            { "keyName": "email", "condition": "eq", "keyValue": "={{ $json.email }}" }
+          ]
+        }
+      },
+      "credentials": { "supabaseApi": { "id": "FjXknluDwpYHQYoI", "name": "supabase dhaka" } }
+    },
+    {
+      "id": "node-if-register-exists",
+      "name": "IF: Email exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1580, 480],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose", "version": 2 },
+          "conditions": [
+            { "id": "cond-register-exists", "leftValue": "={{ $json.id }}", "rightValue": "", "operator": { "type": "string", "operation": "notEmpty", "singleValue": true } }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "node-register-bump",
+      "name": "Register: bump last_seen",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1800, 420],
+      "parameters": {
+        "operation": "update",
+        "tableId": "ncc_bangla_registrations",
+        "filters": {
+          "conditions": [
+            { "keyName": "id", "condition": "eq", "keyValue": "={{ $json.id }}" }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            { "fieldId": "last_seen_at", "fieldValue": "={{ $now.toISO() }}" }
+          ]
+        }
+      },
+      "credentials": { "supabaseApi": { "id": "FjXknluDwpYHQYoI", "name": "supabase dhaka" } }
+    },
+    {
+      "id": "node-insert",
+      "name": "Insert Row",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1800, 540],
+      "parameters": {
+        "operation": "create",
+        "tableId": "ncc_bangla_registrations",
+        "fieldsUi": {
+          "fieldValues": [
+            { "fieldId": "email", "fieldValue": "={{ $('Parse + honeypot').first().json.email }}" },
+            { "fieldId": "name", "fieldValue": "={{ $('Parse + honeypot').first().json.name }}" },
+            { "fieldId": "phone", "fieldValue": "={{ $('Parse + honeypot').first().json.phone }}" },
+            { "fieldId": "marketing_consent", "fieldValue": "={{ $('Parse + honeypot').first().json.marketing_consent }}" }
+          ]
+        }
+      },
+      "credentials": { "supabaseApi": { "id": "FjXknluDwpYHQYoI", "name": "supabase dhaka" } }
+    },
+    {
+      "id": "node-resp-registered",
+      "name": "Respond: registered",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [2020, 540],
+      "parameters": { "respondWith": "json", "responseBody": "={{ { exists: false, registered: true } }}" }
+    },
+    {
+      "id": "node-brevo-contact",
+      "name": "Brevo: add contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [2240, 540],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.brevo.com/v3/contacts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: $('Parse + honeypot').first().json.email, attributes: { FIRSTNAME: $('Parse + honeypot').first().json.name, SMS: $('Parse + honeypot').first().json.phone.replace(/\\s+/g, '') }, listIds: [3], updateEnabled: true }) }}",
+        "options": { "timeout": 5000 }
+      },
+      "credentials": { "httpHeaderAuth": { "id": "KiG1k1GIyjUsa9z5", "name": "Brevo API" } },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "node-brevo-email",
+      "name": "Brevo: send welcome",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [2460, 540],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.brevo.com/v3/smtp/email",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: [{ email: $('Parse + honeypot').first().json.email, name: $('Parse + honeypot').first().json.name }], templateId: 1 }) }}",
+        "options": { "timeout": 5000 }
+      },
+      "credentials": { "httpHeaderAuth": { "id": "KiG1k1GIyjUsa9z5", "name": "Brevo API" } },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "node-resp-invalid",
+      "name": "Respond: invalid action",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [920, 720],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { error: 'azione non valida' } }}",
+        "options": { "responseCode": 400 }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Parse + honeypot", "type": "main", "index": 0 }]] },
+    "Parse + honeypot": { "main": [[{ "node": "Route action", "type": "main", "index": 0 }]] },
+    "Route action": {
+      "main": [
+        [{ "node": "Respond: honeypot OK", "type": "main", "index": 0 }],
+        [{ "node": "Lookup: Find by email", "type": "main", "index": 0 }],
+        [{ "node": "Validate registration", "type": "main", "index": 0 }],
+        [{ "node": "Respond: invalid action", "type": "main", "index": 0 }]
+      ]
+    },
+    "Lookup: Find by email": { "main": [[{ "node": "IF: Lookup found?", "type": "main", "index": 0 }]] },
+    "IF: Lookup found?": {
+      "main": [
+        [{ "node": "Lookup: bump last_seen", "type": "main", "index": 0 }],
+        [{ "node": "Respond: not found", "type": "main", "index": 0 }]
+      ]
+    },
+    "Lookup: bump last_seen": { "main": [[{ "node": "Respond: exists", "type": "main", "index": 0 }]] },
+    "Validate registration": { "main": [[{ "node": "IF: Validation OK?", "type": "main", "index": 0 }]] },
+    "IF: Validation OK?": {
+      "main": [
+        [{ "node": "Register: Find by email", "type": "main", "index": 0 }],
+        [{ "node": "Respond: validation error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Register: Find by email": { "main": [[{ "node": "IF: Email exists?", "type": "main", "index": 0 }]] },
+    "IF: Email exists?": {
+      "main": [
+        [{ "node": "Register: bump last_seen", "type": "main", "index": 0 }],
+        [{ "node": "Insert Row", "type": "main", "index": 0 }]
+      ]
+    },
+    "Register: bump last_seen": { "main": [[{ "node": "Respond: exists", "type": "main", "index": 0 }]] },
+    "Insert Row": { "main": [[{ "node": "Respond: registered", "type": "main", "index": 0 }]] },
+    "Respond: registered": { "main": [[{ "node": "Brevo: add contact", "type": "main", "index": 0 }]] },
+    "Brevo: add contact": { "main": [[{ "node": "Brevo: send welcome", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Rome",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  }
+}
