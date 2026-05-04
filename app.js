@@ -25,8 +25,9 @@ const LS = {
   SETTINGS:    'ncc_settings',
   NOTES:       'ncc_notes',
   CHAPTER_SEL: 'ncc_chapter_selection',
-  REGISTERED:  'ncc_registered',
-  EMAIL:       'ncc_email',
+  REGISTERED:    'ncc_registered',
+  EMAIL:         'ncc_email',
+  WELCOME_SHOWN: 'ncc_welcome_shown',
 };
 
 // ─────────────────────────────────────────
@@ -1962,6 +1963,15 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
   document.getElementById('app-shell').hidden = false;
+  /* Defense in depth: a registered user who never saw the welcome
+     screen (e.g. they registered before this feature shipped) gets
+     it on their next visit. The welcome's own CTA closes it and
+     calls bootApp(). */
+  const welcomeShown = _safeGet(LS.WELCOME_SHOWN) === 'true';
+  if (!welcomeShown && window.splash && typeof window.splash.showWelcome === 'function') {
+    window.splash.showWelcome();
+    return;
+  }
   bootApp();
 });
 

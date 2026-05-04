@@ -46,6 +46,11 @@ button, a, [role="button"] {
 
   --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --smooth: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Welcome screen palette — additive, used only by #welcome-overlay */
+  --gold:        #d4a64a;
+  --coral:       #e63946;
+  --cream-deep:  #ede4d3;
 }
 
 /* 2. Base */
@@ -2244,5 +2249,369 @@ input[name="company_url"] {
 
   .splash-field input {
     width: 100%;
+  }
+}
+
+/* ═══════════════════════════════════════
+   Welcome overlay — first-run only
+   Editorial / Italian magazine meets warm Bengali calligraphy.
+   Mirrors email-templates/welcome.html design language.
+   ═══════════════════════════════════════ */
+
+#welcome-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--cream-deep);
+  z-index: 1100;                /* above splash (1000) */
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 32px 20px 60px;
+}
+
+#welcome-overlay[hidden] {
+  display: none;                /* override the explicit display:flex above (lesson learned) */
+}
+
+/* Top + bottom split-color accent bars (carryover signature from email) */
+.welcome-bar {
+  width: 100%;
+  max-width: 720px;
+  height: 8px;
+  background: linear-gradient(90deg,
+    var(--coral) 0%, var(--coral) 50%,
+    var(--green) 50%, var(--green) 100%);
+  flex-shrink: 0;
+  transform-origin: left center;
+}
+.welcome-bar-top    { margin-bottom: 28px; }
+.welcome-bar-bottom { margin-top: 36px; }
+
+/* Card */
+.welcome-card {
+  background: var(--card);
+  border-radius: 4px;           /* sharper than --radius — editorial, not bubbly */
+  padding: 40px 36px;
+  max-width: 640px;
+  width: 100%;
+  box-shadow:
+    0 1px 0 rgba(0,0,0,0.04),
+    0 12px 32px rgba(26,107,58,0.08),
+    0 24px 60px rgba(0,0,0,0.06);
+  border: 1px solid rgba(212,166,74,0.18);
+  position: relative;
+}
+
+/* Eyebrow / "Iscrizione confermata · ১" */
+.welcome-eyebrow {
+  font-family: 'Lora', Georgia, serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 22px;
+  text-align: center;
+}
+
+/* Headline row: Italian + gold underline + Bengali */
+.welcome-headline-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.welcome-headline-it {
+  font-family: 'Lora', Georgia, serif;
+  font-size: clamp(2.6rem, 7vw, 3.8rem);
+  font-weight: 700;
+  color: var(--green);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.welcome-underline {
+  display: block;
+  width: 88px;
+  height: 3px;
+  background: var(--gold);
+  transform-origin: left center;
+}
+
+.welcome-headline-bn {
+  font-family: 'Noto Sans Bengali', 'Vrinda', sans-serif;
+  font-size: clamp(1.9rem, 5.4vw, 2.6rem);
+  font-weight: 700;
+  color: var(--coral);
+  line-height: 1;
+  margin: 0;
+}
+
+/* Subtitle — small bilingual line under the headline */
+.welcome-subtitle {
+  text-align: center;
+  font-size: 1.02rem;
+  color: var(--text-muted);
+  margin-bottom: 28px;
+}
+.welcome-subtitle span[lang="bn"] {
+  font-family: 'Noto Sans Bengali', 'Vrinda', sans-serif;
+  margin-left: 4px;
+}
+
+/* Device-local notice — red-bordered alert box (carryover from email) */
+.welcome-notice {
+  background: #fdf6f0;
+  border-left: 4px solid var(--coral);
+  border-radius: 2px;
+  padding: 16px 20px;
+  margin-bottom: 28px;
+}
+
+.welcome-notice-label {
+  display: inline-block;
+  font-family: 'Lora', Georgia, serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--coral);
+  margin-bottom: 8px;
+}
+.welcome-notice-label span[lang="bn"] {
+  font-family: 'Noto Sans Bengali', 'Vrinda', sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.welcome-notice p {
+  font-size: 0.94rem;
+  line-height: 1.55;
+  color: var(--text);
+  margin: 0;
+}
+.welcome-notice p + p {
+  margin-top: 8px;
+  font-family: 'Noto Sans Bengali', 'Vrinda', sans-serif;
+  color: #5d3a3a;
+}
+.welcome-notice strong {
+  color: var(--coral);
+}
+
+/* Tip cards — numbered serif label, alternating accent color border */
+.welcome-tips {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 32px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.welcome-tip {
+  position: relative;
+  background: #fefcf6;
+  border: 1px solid rgba(0,0,0,0.05);
+  border-left: 4px solid var(--gold);
+  border-radius: 2px;
+  padding: 18px 20px 18px 76px;
+  min-height: 72px;
+}
+.welcome-tip-2 { border-left-color: var(--coral); }
+.welcome-tip-3 { border-left-color: var(--green); }
+
+.welcome-tip-num {
+  position: absolute;
+  top: 14px;
+  left: 18px;
+  font-family: 'Lora', Georgia, serif;
+  font-size: 2.4rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--gold);
+  opacity: 0.75;
+  letter-spacing: -0.02em;
+}
+.welcome-tip-2 .welcome-tip-num { color: var(--coral); }
+.welcome-tip-3 .welcome-tip-num { color: var(--green); }
+
+.welcome-tip h3 {
+  font-family: 'Lora', Georgia, serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 4px;
+}
+.welcome-tip p {
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  margin: 0;
+}
+.welcome-tip p + p {
+  margin-top: 4px;
+  font-family: 'Noto Sans Bengali', 'Vrinda', sans-serif;
+  color: var(--coral);
+  font-weight: 500;
+}
+
+/* CTA — hard-shadow button, the signature flourish */
+.welcome-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  background: var(--green);
+  color: #fff;
+  font-family: 'Lora', Georgia, serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+  padding: 16px 28px;
+  border: 2px solid var(--green);
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 6px 6px 0 var(--gold);
+  transition:
+    transform var(--transition-base),
+    box-shadow var(--transition-base),
+    background var(--transition-base);
+}
+.welcome-cta:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 8px 8px 0 var(--gold);
+  background: #155f32;
+}
+.welcome-cta:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--gold);
+}
+.welcome-cta:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
+}
+.welcome-cta-sep {
+  opacity: 0.5;
+  font-weight: 400;
+}
+.welcome-cta span[lang="bn"] {
+  font-family: 'Noto Sans Bengali', 'Vrinda', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+/* ═══════════ Orchestrated entrance ═══════════ */
+
+@media (prefers-reduced-motion: no-preference) {
+
+  @keyframes welcomeBarSlide {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+  }
+  @keyframes welcomeFadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes welcomeFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes welcomeHeadlineIt {
+    from { opacity: 0; clip-path: inset(0 100% 0 0); }
+    to   { opacity: 1; clip-path: inset(0 0 0 0); }
+  }
+  @keyframes welcomeUnderlineDraw {
+    from { transform: scaleX(0); opacity: 0.5; }
+    to   { transform: scaleX(1); opacity: 1; }
+  }
+  @keyframes welcomeHeadlineBn {
+    from { opacity: 0; transform: translateY(14px) rotate(-2deg); }
+    to   { opacity: 1; transform: translateY(0)    rotate(0); }
+  }
+  @keyframes welcomeStagger {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes welcomeCtaPop {
+    0%   { opacity: 0; transform: scale(0.9); }
+    60%  { opacity: 1; transform: scale(1.04); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  /* Bars */
+  .welcome-bar-top {
+    animation: welcomeBarSlide 320ms ease-out 0ms both;
+  }
+  .welcome-bar-bottom {
+    animation: welcomeBarSlide 320ms ease-out 200ms both;
+  }
+
+  /* Card body */
+  .welcome-card {
+    animation: welcomeFadeUp 460ms var(--smooth) 220ms both;
+  }
+
+  .welcome-eyebrow {
+    animation: welcomeFadeIn 380ms ease-out 500ms both;
+  }
+  .welcome-headline-it {
+    animation: welcomeHeadlineIt 620ms ease-out 620ms both;
+  }
+  .welcome-underline {
+    animation: welcomeUnderlineDraw 360ms ease-out 1100ms both;
+  }
+  .welcome-headline-bn {
+    animation: welcomeHeadlineBn 520ms var(--spring) 1280ms both;
+  }
+  .welcome-subtitle {
+    animation: welcomeStagger 420ms var(--smooth) 1500ms both;
+  }
+  .welcome-notice {
+    animation: welcomeStagger 460ms var(--smooth) 1700ms both;
+  }
+  .welcome-tip-1 { animation: welcomeStagger 440ms var(--smooth) 1880ms both; }
+  .welcome-tip-2 { animation: welcomeStagger 440ms var(--smooth) 2030ms both; }
+  .welcome-tip-3 { animation: welcomeStagger 440ms var(--smooth) 2180ms both; }
+  .welcome-cta {
+    animation: welcomeCtaPop 460ms var(--spring) 2380ms both;
+  }
+}
+
+/* ═══════════ Mobile (≤640px) ═══════════ */
+@media (max-width: 640px) {
+  #welcome-overlay {
+    padding: 18px 14px 40px;
+  }
+  .welcome-bar {
+    height: 4px;
+  }
+  .welcome-bar-top    { margin-bottom: 18px; }
+  .welcome-bar-bottom { margin-top: 22px; }
+  .welcome-card {
+    padding: 28px 22px;
+  }
+  .welcome-eyebrow {
+    font-size: 0.66rem;
+    letter-spacing: 0.22em;
+    margin-bottom: 16px;
+  }
+  .welcome-tip {
+    padding: 16px 18px 16px 64px;
+  }
+  .welcome-tip-num {
+    font-size: 2rem;
+    top: 14px;
+    left: 16px;
+  }
+  .welcome-cta {
+    padding: 14px 20px;
+    font-size: 1rem;
   }
 }
