@@ -24,7 +24,8 @@
         <button id="splash-tab-register" class="splash-tab" role="tab" aria-selected="false" aria-controls="splash-form-register">Registrati</button>
       </div>
 
-      <form id="splash-form-login" novalidate role="tabpanel" aria-labelledby="splash-tab-login">
+      <form id="splash-form-login" novalidate role="tabpanel" aria-labelledby="splash-tab-login"
+            action="javascript:void(0)" method="post">
         <div class="splash-field">
           <label for="splash-login-email">Email</label>
           <input type="email" id="splash-login-email" name="email" placeholder="la-tua@email.com" required autocomplete="email">
@@ -33,7 +34,8 @@
         <button id="splash-btn-login" type="submit" class="btn btn-primary splash-submit-btn">Accedi</button>
       </form>
 
-      <form id="splash-form-register" hidden novalidate role="tabpanel" aria-labelledby="splash-tab-register">
+      <form id="splash-form-register" hidden novalidate role="tabpanel" aria-labelledby="splash-tab-register"
+            action="javascript:void(0)" method="post">
         <div class="splash-field">
           <label for="splash-reg-name">Nome e cognome</label>
           <input type="text" id="splash-reg-name" name="name" placeholder="Mario Rossi" required autocomplete="name">
@@ -665,7 +667,193 @@
   </div><!-- /#app-shell -->
 
   <script src="questions.js?v=12"></script>
-  <script src="splash.js?v=3"></script>
+  <script>
+  /* NCC Bangla — splash (inline)
+     Inlined into index.html so there's no separate file to cache, block, or
+     race against. Visible "v5" stamp at top-right of the splash card confirms
+     this code executed (debugging aid for users who report the form looking
+     broken). */
+
+  (function () {
+    'use strict';
+
+    var SPLASH_VERSION   = 5;
+    var FETCH_TIMEOUT_MS = 15000;
+    var WEBHOOK_URL      = 'https://n8n.x3roautomations.it/webhook/ncc-register';
+
+    function el(id) { return document.getElementById(id); }
+
+    function _setSubmitLoading(btn) {
+      btn.disabled = true;
+      btn.textContent = 'Inviando…';
+    }
+
+    function _setSubmitIdle() {
+      var loginBtn = el('splash-btn-login');
+      var regBtn   = el('splash-btn-register');
+      if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = 'Accedi'; }
+      if (regBtn)   { regBtn.disabled   = false; regBtn.textContent   = 'Registrati'; }
+    }
+
+    function setError(msg) {
+      var errEl = el('splash-error');
+      errEl.textContent = msg;
+      errEl.hidden = false;
+      _setSubmitIdle();
+    }
+
+    function clearError() {
+      var errEl = el('splash-error');
+      errEl.textContent = '';
+      errEl.hidden = true;
+    }
+
+    function _isValidEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+    function _isValidPhone(p) { return p.replace(/\D/g, '').length >= 8; }
+
+    function _activateTab(tab) {
+      var loginTab  = el('splash-tab-login');
+      var regTab    = el('splash-tab-register');
+      var loginForm = el('splash-form-login');
+      var regForm   = el('splash-form-register');
+      var isLogin   = (tab === 'login');
+
+      loginTab.classList.toggle('active', isLogin);
+      regTab.classList.toggle('active', !isLogin);
+      loginTab.setAttribute('aria-selected', String(isLogin));
+      regTab.setAttribute('aria-selected', String(!isLogin));
+      loginForm.hidden = !isLogin;
+      regForm.hidden   = isLogin;
+      clearError();
+      _setSubmitIdle();
+    }
+
+    function _switchToRegister(email) {
+      _activateTab('register');
+      var emailField = el('splash-reg-email');
+      if (emailField) emailField.value = email || '';
+    }
+
+    function _dismissSplash(email) {
+      try {
+        localStorage.setItem('ncc_registered', 'true');
+        localStorage.setItem('ncc_email', email);
+      } catch (e) { /* private mode etc. */ }
+      el('splash-overlay').hidden = true;
+      el('app-shell').hidden = false;
+      if (typeof bootApp === 'function') {
+        try { bootApp(); }
+        catch (err) { console.error('[splash] bootApp threw:', err); }
+      }
+    }
+
+    function _fetchJson(body) {
+      var controller = new AbortController();
+      var timer = setTimeout(function () { controller.abort(); }, FETCH_TIMEOUT_MS);
+      return fetch(WEBHOOK_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(body),
+        signal:  controller.signal,
+      }).then(function (res) {
+        clearTimeout(timer);
+        return res.json();
+      }, function (err) {
+        clearTimeout(timer);
+        if (err && err.name === 'AbortError') {
+          var e = new Error('timeout');
+          e.timedOut = true;
+          throw e;
+        }
+        throw err;
+      });
+    }
+
+    function _handleNetworkError(err, ctx) {
+      console.error('[splash] ' + ctx + ' failed:', err && err.name, err && err.message);
+      if (err && err.timedOut) {
+        setError('La richiesta è troppo lenta. Controlla la connessione e riprova. Se il problema persiste, prova a disabilitare adblock/VPN.');
+      } else {
+        setError('Errore di rete. Controlla la connessione e riprova.');
+      }
+    }
+
+    function _handleLoginSubmit(e) {
+      e.preventDefault();
+      clearError();
+      var email = (el('splash-login-email').value || '').trim().toLowerCase();
+      var hp    = (document.querySelector('#splash-form-login [name="company_url"]').value || '');
+      var btn   = el('splash-btn-login');
+      if (!_isValidEmail(email)) { setError('Email non valida.'); return; }
+      _setSubmitLoading(btn);
+      _fetchJson({ action: 'lookup', email: email, hp: hp })
+        .then(function (data) {
+          if (data && data.error) { setError(data.error); return; }
+          if (data && data.exists === true) {
+            try { _dismissSplash(email); }
+            catch (err) {
+              console.error('[splash] dismiss failed:', err);
+              setError('Errore inatteso. Ricarica la pagina e riprova.');
+            }
+          } else {
+            _switchToRegister(email);
+            setError('Email non trovata. Compila il modulo di registrazione.');
+          }
+        })
+        .catch(function (err) { _handleNetworkError(err, 'login'); });
+    }
+
+    function _handleRegisterSubmit(e) {
+      e.preventDefault();
+      clearError();
+      var name    = (el('splash-reg-name').value  || '').trim();
+      var email   = (el('splash-reg-email').value || '').trim().toLowerCase();
+      var phone   = (el('splash-reg-phone').value || '').trim();
+      var consent = el('splash-reg-consent').checked;
+      var hp      = (document.querySelector('#splash-form-register [name="company_url"]').value || '');
+      var btn     = el('splash-btn-register');
+      if (!name)                  { setError('Inserisci il tuo nome.'); return; }
+      if (!_isValidEmail(email))  { setError('Email non valida.'); return; }
+      if (!_isValidPhone(phone))  { setError('Numero di telefono non valido (minimo 8 cifre).'); return; }
+      if (!consent)               { setError('Devi accettare la privacy policy per continuare.'); return; }
+      _setSubmitLoading(btn);
+      _fetchJson({
+        action: 'register', email: email, name: name, phone: phone,
+        marketing_consent: consent, hp: hp,
+      })
+        .then(function (data) {
+          if (data && data.error) { setError(data.error); return; }
+          try { _dismissSplash(email); }
+          catch (err) {
+            console.error('[splash] dismiss failed:', err);
+            setError('Errore inatteso. Ricarica la pagina e riprova.');
+          }
+        })
+        .catch(function (err) { _handleNetworkError(err, 'register'); });
+    }
+
+    function _stampVersion() {
+      var card = document.querySelector('.splash-card');
+      if (!card) return;
+      var stamp = document.createElement('div');
+      stamp.textContent = 'v' + SPLASH_VERSION;
+      stamp.style.cssText = 'position:absolute;top:6px;right:8px;font-size:10px;color:#999;opacity:0.5;';
+      card.style.position = 'relative';
+      card.appendChild(stamp);
+    }
+
+    function _init() {
+      console.log('[splash] init v' + SPLASH_VERSION);
+      el('splash-tab-login').addEventListener('click', function () { _activateTab('login'); });
+      el('splash-tab-register').addEventListener('click', function () { _activateTab('register'); });
+      el('splash-form-login').addEventListener('submit', _handleLoginSubmit);
+      el('splash-form-register').addEventListener('submit', _handleRegisterSubmit);
+      _stampVersion();
+    }
+
+    window.splash = { init: _init };
+  }());
+  </script>
   <script src="app.js?v=15"></script>
 </body>
 </html>
