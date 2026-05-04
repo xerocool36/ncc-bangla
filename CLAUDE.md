@@ -198,4 +198,4 @@ n8n workflow ID: `cixOQc0zzz2rFfO7`. The register branch does a pre-flight Get-b
 
 ### Known issues / open follow-ups
 
-- **Brevo welcome email template** — the actual `email-templates/welcome.html` content needs to be pasted into Brevo's HTML editor at template ID 1; until then registrants get the placeholder version.
+_(none open as of 2026-05-04)_
