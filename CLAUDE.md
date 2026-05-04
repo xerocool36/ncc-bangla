@@ -134,7 +134,7 @@ Single shared modal (`#modal-overlay`). Two entry points:
 - GitHub Pages (main branch): `https://xerocool36.github.io/ncc-bangla/`
 - Pages is built from `main`; merge `dev → main` to deploy publicly
 
-## Mandatory Registration Splash (added 2026-05-02)
+## Mandatory Registration Splash (added 2026-05-02, n8n migration 2026-05-04)
 
 Every visitor must register (or "log in" by email) before the app shell renders. Lead-generation play. Captures **name, email, phone, marketing consent**. Per-device localStorage flag (`ncc_registered=true`) skips the splash on return visits.
 
@@ -142,48 +142,62 @@ Every visitor must register (or "log in" by email) before the app shell renders.
 
 | File | Role |
 |------|------|
-| `index.html` | `#splash-overlay` markup wrapping the app shell; loaded BEFORE `app.js` |
-| `splash.js` | Module pattern, `splash.init()` called from `app.js` DOMContentLoaded when not registered |
+| `index.html` | `#splash-overlay` markup + **inlined splash JS** (~lines 670-880); loaded BEFORE `app.js` |
 | `privacy.html` | GDPR Italian privacy policy linked from the splash + footer |
 | `email-templates/welcome.html` | Brevo HTML template (paste manually into Brevo dashboard) — bilingual IT+BN, vibrant editorial design |
 | `supabase/migrations/001_ncc_bangla_registrations.sql` | Table definition (already applied to prod) |
-| `supabase/functions/ncc-registrations/index.ts` | Deno Edge Function — only public POST endpoint |
+| `n8n/ncc-registrations.json` | n8n workflow JSON (re-export here after every UI edit) — current public POST endpoint |
+| `n8n/README.md` | Webhook URL, required credentials, re-import instructions |
+| `supabase/functions/ncc-registrations/index.ts` | **DEPRECATED** — old Deno Edge Function. Keep until ≥ 2026-05-11, then retire (Phase D). |
 
-### Architecture
+### Architecture (current — n8n)
 
 ```
-Browser splash → POST https://drypjcgloclnxayfzdsz.supabase.co/functions/v1/ncc-registrations
-                  ├── action: "lookup"   → SELECT email, returns {exists: bool}
-                  └── action: "register" → INSERT, returns {exists:false, registered:true}
-                                            then EdgeRuntime.waitUntil(brevoCall) in background
-                                            (adds contact to Brevo list + sends welcome email template)
+Browser splash → POST https://n8n.x3roautomations.it/webhook/ncc-register
+                  ├── honeypot tripped         → {ok:true}
+                  ├── action: "lookup"         → Supabase get → {exists: bool}
+                  ├── action: "register"       → validate → Supabase get-by-email
+                  │                                ├── exists  → bump last_seen → {exists:true}
+                  │                                └── new     → Supabase insert → {exists:false, registered:true}
+                  │                                              ↓ (after respond, fire-and-forget)
+                  │                                              Brevo add contact → Brevo send welcome
+                  └── unknown action           → {error:"azione non valida"} 400
 ```
+
+n8n workflow ID: `cixOQc0zzz2rFfO7`. The register branch does a pre-flight Get-by-email rather than catching Postgres `23505` after a failed insert — cleaner than relying on n8n's inconsistent `error?.code` exposure for failed nodes.
 
 ### Supabase
 
 - **Shared with `review-management`** (project `drypjcgloclnxayfzdsz`). Will move to a dedicated project when NCC has its first paying client (per `agency-ops/ncc-bangla-supabase` memory).
 - Table: `ncc_bangla_registrations` (prefixed for namespace isolation). RLS enabled.
-- Edge Function deployed via `supabase functions deploy ncc-registrations --project-ref drypjcgloclnxayfzdsz`.
-- Function secrets set via `supabase secrets set BREVO_API_KEY=... NCC_BANGLA_LIST_ID=3 NCC_BANGLA_WELCOME_TEMPLATE_ID=1`.
+- n8n credential `supabase dhaka` (id `FjXknluDwpYHQYoI`) is reused — same project, same service role key.
 
 ### Brevo
 
 - Contact list ID: **3** ("NCC Bangla — Iscritti")
 - Welcome template ID: **1** ("NCC Bangla — Benvenuto") — paste contents of `email-templates/welcome.html` into Brevo's HTML editor
 - API key in `.env` (`BREVO_API_KEY`, scoped to Transactional + Contacts only)
+- n8n credential `Brevo API` (id `KiG1k1GIyjUsa9z5`) — `httpHeaderAuth` with header `api-key`
+- List ID `3` and template ID `1` are **hardcoded in workflow nodes**, not pulled from `$env` — the user's n8n instance does not resolve `$env.*` (per review-management Phase 1 notes)
 
 ### Bot defense
 
 - **Honeypot field only** (input named `company_url` hidden via CSS). Sufficient for a free study tool.
-- **Turnstile was removed** (was causing UX issues for users on certain networks). The Cloudflare Turnstile site key is still registered (in `.env`) but unused. To re-enable: add back `<div class="cf-turnstile">` in index.html, restore `_getTurnstileToken` calls in splash.js, restore `verifyTurnstile()` call in Edge Function — full deletion was commit `13236c3`, can be reverted.
+- The frontend strict-checks the success response (`data.registered === true || data.exists === true`) before dismissing the splash — closes a 1Password autofill bypass where the password manager fills the honeypot and the backend silently 200's with `{ok:true}`.
+- Turnstile was removed (commit `13236c3`); the Cloudflare site key in `.env` is unused. To re-enable, restore the widget in index.html + add a Turnstile-verify Code node before the Switch in n8n.
 
 ### Local dev
 
-- `python3 -m http.server 8000` — splash form-submit needs the LIVE Edge Function (no localhost mock); just don't use anti-bot/honeypot to test the UI flow.
-- Cache-bust strategy: bump query string version when shipping JS changes (`splash.js?v=N`, `app.js?v=N`). GitHub Pages serves with `cache-control: max-age=600` so users with old HTML cached take up to 10 min to revalidate.
+- `python3 -m http.server 8000` — splash form-submit hits the LIVE n8n webhook (no localhost mock); CORS allows `http://localhost:8000`, `http://127.0.0.1:8000`, and `https://xerocool36.github.io`.
+- For aggressive cache problems during dev, use the no-cache wrapper at `/tmp/ncc_serve_nocache.py` (sends `Cache-Control: no-store` headers).
+- Cache-bust strategy: bump `?v=N` query strings on `style.css`, `app.js`, `questions.js` when shipping breaking changes. Currently `style.css?v=5`, `app.js?v=16`, `questions.js?v=12`. The inline splash also has its own `SPLASH_VERSION` constant (currently 6) — bump it AND the visible `v6` stamp top-right of the splash card serves as a deploy-confirmation signal for users reporting bugs.
+- GitHub Pages serves with `cache-control: max-age=600` so users with old HTML cached take up to 10 min to revalidate without a hard reload.
 
-### Known issues (open as of 2026-05-02 16:30)
+### CSS gotcha (subtle bug fixed 2026-05-04)
 
-- **One user reported splash stuck on "Inviando" + tabs unclickable** despite multiple cache-bust deploys, removing Turnstile entirely, and verified end-to-end success in Playwright on both desktop and mobile (375px) viewports. DB has 9 successful registrations including the user's own, so the server is working — likely browser-specific cache or extension issue. Diagnostic next step: have user open DevTools → Network → "Disable cache" → reload + screenshot console errors. See commits `1917112`, `c4478bd`, `13236c3` for the UX-fix attempts.
-- **Test rows in `ncc_bangla_registrations`** to clean up once everything is verified: id 3 (claude-debug-...), id 5 (claude-fresh-...), id 7 (invisible-test-...), id 8 (no-turnstile-...), id 9 (hhshshehehsjeiei@... — junk test).
-- **Brevo welcome email template** — was set up at template ID 1 with placeholder content; user needs to paste the actual contents of `email-templates/welcome.html` into Brevo's HTML editor for the proper bilingual design to go out.
+`#splash-overlay { display: flex }` (ID-selector specificity 0,1,0,0) wins the cascade against the user agent `[hidden] { display: none }` (0,0,1,0). Without an explicit `#splash-overlay[hidden] { display: none }` rule, setting `el.hidden = true` in JS does not visually hide the element. Two days of "stuck on Inviando" reports were caused by this missing one-line CSS rule. **Always pair an `#id { display: ... }` rule with a matching `#id[hidden]` override** when JS will toggle visibility via the `hidden` attribute.
+
+### Known issues / open follow-ups (as of 2026-05-04)
+
+- **Phase D: retire the Supabase Edge Function** — wait until ≥ 2026-05-11 of stable n8n traffic, then delete `supabase/functions/ncc-registrations/`, drop the deprecated row from the file table above, and revoke its function secrets via `supabase secrets unset`.
+- **Brevo welcome email template** — the actual `email-templates/welcome.html` content needs to be pasted into Brevo's HTML editor at template ID 1; until then registrants get the placeholder version.

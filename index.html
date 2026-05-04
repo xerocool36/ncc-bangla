@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NCC Bangla — এনসিসি পরীক্ষা প্রস্তুতি</title>
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Nunito:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;600&display=swap" rel="stylesheet">
@@ -60,6 +60,66 @@
 
       <div id="splash-error" hidden></div>
     </div>
+  </div>
+
+  <!-- ═══════════ WELCOME OVERLAY (first-run only) ═══════════ -->
+  <div id="welcome-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="welcome-heading">
+    <div class="welcome-bar welcome-bar-top" aria-hidden="true"></div>
+
+    <div class="welcome-card">
+      <p class="welcome-eyebrow">Iscrizione confermata · ১</p>
+
+      <div class="welcome-headline-row">
+        <h1 class="welcome-headline-it" id="welcome-heading">Benvenuto.</h1>
+        <span class="welcome-underline" aria-hidden="true"></span>
+        <h2 class="welcome-headline-bn" lang="bn">স্বাগতম।</h2>
+      </div>
+
+      <p class="welcome-subtitle">
+        Sei dentro. <span lang="bn">আপনি ভিতরে আছেন।</span>
+      </p>
+
+      <div class="welcome-notice" role="note">
+        <span class="welcome-notice-label">Importante · <span lang="bn">গুরুত্বপূর্ণ</span></span>
+        <p>
+          I tuoi <strong>progressi sono salvati solo su questo dispositivo</strong>.
+          Se cambi telefono o cancelli i dati del browser, ricominci da zero.
+        </p>
+        <p lang="bn">
+          আপনার অগ্রগতি <strong>শুধুমাত্র এই ডিভাইসে সংরক্ষিত</strong>।
+          ব্রাউজার ডেটা মুছলে বা ফোন বদলালে আবার শুরু থেকে।
+        </p>
+      </div>
+
+      <ol class="welcome-tips">
+        <li class="welcome-tip welcome-tip-1">
+          <span class="welcome-tip-num">01</span>
+          <h3>Studia per capitoli.</h3>
+          <p>Apri "Capitoli" e attacca con uno per volta — meccanica, sicurezza, normativa.</p>
+          <p lang="bn">অধ্যায় অনুযায়ী পড়ুন।</p>
+        </li>
+        <li class="welcome-tip welcome-tip-2">
+          <span class="welcome-tip-num">02</span>
+          <h3>Salva quelle difficili.</h3>
+          <p>Il bookmark (l'icona del segnalibro) è il tuo amico — quando una domanda ti frega, salvala.</p>
+          <p lang="bn">কঠিন প্রশ্নগুলো বুকমার্ক করুন।</p>
+        </li>
+        <li class="welcome-tip welcome-tip-3">
+          <span class="welcome-tip-num">03</span>
+          <h3>Fai il quiz a tempo.</h3>
+          <p>Quando ti senti pronto, "Test Pratico" simula l'esame — 20 domande, 60 secondi ciascuna.</p>
+          <p lang="bn">সময় ধরে কুইজ দিন।</p>
+        </li>
+      </ol>
+
+      <button id="welcome-cta" type="button" class="welcome-cta">
+        <span>Iniziamo</span>
+        <span class="welcome-cta-sep" aria-hidden="true">·</span>
+        <span lang="bn">শুরু করুন</span>
+      </button>
+    </div>
+
+    <div class="welcome-bar welcome-bar-bottom" aria-hidden="true"></div>
   </div>
 
   <!-- ═══════════ APP SHELL ═══════════ -->
@@ -746,9 +806,38 @@
       _setSubmitIdle();
       el('splash-overlay').hidden = true;
       el('app-shell').hidden = false;
+      /* First-run welcome takes precedence over bootApp. _closeWelcome
+         calls bootApp() itself when the user dismisses the welcome. */
+      if (_shouldShowWelcome()) { _showWelcome(); return; }
       if (typeof bootApp === 'function') {
         try { bootApp(); }
         catch (err) { console.error('[splash] bootApp threw:', err); }
+      }
+    }
+
+    function _shouldShowWelcome() {
+      try { return localStorage.getItem('ncc_welcome_shown') !== 'true'; }
+      catch (e) { return false; }   /* private mode → skip welcome rather than risk loop */
+    }
+
+    function _showWelcome() {
+      var overlay = el('welcome-overlay');
+      if (!overlay) return;
+      overlay.hidden = false;
+      var cta = el('welcome-cta');
+      if (cta && !cta._wired) {
+        cta._wired = true;
+        cta.addEventListener('click', _closeWelcome);
+      }
+    }
+
+    function _closeWelcome() {
+      try { localStorage.setItem('ncc_welcome_shown', 'true'); } catch (e) {}
+      var overlay = el('welcome-overlay');
+      if (overlay) overlay.hidden = true;
+      if (typeof bootApp === 'function') {
+        try { bootApp(); }
+        catch (err) { console.error('[welcome] bootApp threw:', err); }
       }
     }
 
@@ -888,9 +977,9 @@
     }
     _bootSplashIfNeeded();
 
-    window.splash = { init: _init };
+    window.splash = { init: _init, showWelcome: _showWelcome };
   }());
   </script>
-  <script src="app.js?v=16"></script>
+  <script src="app.js?v=17"></script>
 </body>
 </html>
