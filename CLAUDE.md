@@ -148,7 +148,6 @@ Every visitor must register (or "log in" by email) before the app shell renders.
 | `supabase/migrations/001_ncc_bangla_registrations.sql` | Table definition (already applied to prod) |
 | `n8n/ncc-registrations.json` | n8n workflow JSON (re-export here after every UI edit) — current public POST endpoint |
 | `n8n/README.md` | Webhook URL, required credentials, re-import instructions |
-| `supabase/functions/ncc-registrations/index.ts` | **DEPRECATED** — old Deno Edge Function. Keep until ≥ 2026-05-11, then retire (Phase D). |
 
 ### Architecture (current — n8n)
 
@@ -197,7 +196,6 @@ n8n workflow ID: `cixOQc0zzz2rFfO7`. The register branch does a pre-flight Get-b
 
 `#splash-overlay { display: flex }` (ID-selector specificity 0,1,0,0) wins the cascade against the user agent `[hidden] { display: none }` (0,0,1,0). Without an explicit `#splash-overlay[hidden] { display: none }` rule, setting `el.hidden = true` in JS does not visually hide the element. Two days of "stuck on Inviando" reports were caused by this missing one-line CSS rule. **Always pair an `#id { display: ... }` rule with a matching `#id[hidden]` override** when JS will toggle visibility via the `hidden` attribute.
 
-### Known issues / open follow-ups (as of 2026-05-04)
+### Known issues / open follow-ups
 
-- **Phase D: retire the Supabase Edge Function** — wait until ≥ 2026-05-11 of stable n8n traffic, then delete `supabase/functions/ncc-registrations/`, drop the deprecated row from the file table above, and revoke its function secrets via `supabase secrets unset`.
 - **Brevo welcome email template** — the actual `email-templates/welcome.html` content needs to be pasted into Brevo's HTML editor at template ID 1; until then registrants get the placeholder version.
