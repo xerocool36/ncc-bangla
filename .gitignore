@@ -5,3 +5,8 @@
 .env.*
 !.env.example
 supabase/.temp/
+.playwright-mcp/
+
+# Orphan / backup image assets — not referenced by the app, kept local only
+logo2.png
+ncc logo.png
