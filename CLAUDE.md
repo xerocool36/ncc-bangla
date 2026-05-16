@@ -1,4 +1,4 @@
-# CLAUDE.md — ncc-prep
+# CLAUDE.md — ncc-bangla
 
 This file provides guidance to Claude Code when working in this directory.
 
@@ -32,14 +32,14 @@ Outputs a new `questions.js` with the global `QUESTIONS` array (515 questions ac
 
 | File | Lines | Role |
 |------|-------|------|
-| `app.js` | ~2000 | All application logic |
-| `index.html` | ~615 | HTML shell; all views pre-rendered |
-| `style.css` | ~1925 | All styling and animations |
+| `app.js` | ~2040 | All application logic |
+| `index.html` | ~985 | HTML shell; all views pre-rendered + inlined splash JS |
+| `style.css` | ~2620 | All styling and animations |
 | `questions.js` | auto-gen | `QUESTIONS` array, do not edit |
 | `extract_questions.py` | — | PDF → questions.js converter |
 | `logo.png` | — | NCC Bangla app logo (nav, home, settings) |
 | `x3ro-logo.png` / `x3ro-logo-sm.png` | — | "Realizzato da" footer logo, served via `<picture>` (sm ≤640px) |
-| `logo2.png` | — | Original 2.4MB X3RO source asset (kept as backup; not referenced) |
+| `logo2.png` | — | Original 2.4MB X3RO source asset — gitignored (local backup only, not referenced) |
 
 ## app.js Module Map
 
@@ -130,8 +130,8 @@ Single shared modal (`#modal-overlay`). Two entry points:
 ## Git / Deployment
 
 - Active dev branch: `dev`
-- GitHub: `xerocool36/ncc-prep`
-- GitHub Pages (main branch): `https://xerocool36.github.io/ncc-prep/`
+- GitHub: `xerocool36/ncc-bangla`
+- GitHub Pages (main branch): `https://xerocool36.github.io/ncc-bangla/`
 - Pages is built from `main`; merge `dev → main` to deploy publicly
 
 ## Mandatory Registration Splash (added 2026-05-02, n8n migration 2026-05-04)
